@@ -9,13 +9,14 @@ import (
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReportMetrics(t *testing.T) {
+
 	// Поднимаем тестовый HTTP сервер
 	received := make(map[string]string)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// сохраняем URL и Content-Type для проверки
 		received[r.URL.Path] = r.Header.Get("Content-Type")
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -26,19 +27,46 @@ func TestReportMetrics(t *testing.T) {
 	metrics.Gauge["TestGauge"] = 12.34
 	metrics.Counter["TestCounter"] = 42
 
-	// Переопределяем ReportMetrics, чтобы слать на ts.URL
 	client := &http.Client{}
+
+	// Отправляем gauge
 	for name, value := range metrics.Gauge {
-		url := fmt.Sprintf("%s/update/gauge/%s/%s", ts.URL, name, strconv.FormatFloat(value, 'f', 2, 64))
-		req, _ := http.NewRequest(http.MethodPost, url, nil)
+		url := fmt.Sprintf("%s/update/gauge/%s/%s",
+			ts.URL,
+			name,
+			strconv.FormatFloat(value, 'f', 2, 64),
+		)
+
+		req, err := http.NewRequest(http.MethodPost, url, nil)
+		require.NoError(t, err)
+
 		req.Header.Set("Content-Type", "text/plain")
-		client.Do(req)
+
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	}
+
+	// Отправляем counter
 	for name, value := range metrics.Counter {
-		url := fmt.Sprintf("%s/update/counter/%s/%d", ts.URL, name, value)
-		req, _ := http.NewRequest(http.MethodPost, url, nil)
+		url := fmt.Sprintf("%s/update/counter/%s/%d",
+			ts.URL,
+			name,
+			value,
+		)
+
+		req, err := http.NewRequest(http.MethodPost, url, nil)
+		require.NoError(t, err)
+
 		req.Header.Set("Content-Type", "text/plain")
-		client.Do(req)
+
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close() 
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	}
 
 	// Проверяем, что сервер получил правильные пути и заголовки
