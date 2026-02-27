@@ -20,6 +20,13 @@ func ReportMetrics(metrics *Metrics) {
 		req, _ := http.NewRequest(http.MethodPost, url, nil)
 		req.Header.Set("Content-Type", "text/plain")
 		client.Do(req)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+
+		resp.Body.Close()
 	}
 
 	// Отправка counter
@@ -33,5 +40,12 @@ func ReportMetrics(metrics *Metrics) {
 		req, _ := http.NewRequest(http.MethodPost, url, nil)
 		req.Header.Set("Content-Type", "text/plain")
 		client.Do(req)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			continue
+		}
+
+		resp.Body.Close()
 	}
 }
