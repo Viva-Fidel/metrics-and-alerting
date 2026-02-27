@@ -17,16 +17,19 @@ func ReportMetrics(metrics *Metrics) {
 			strconv.FormatFloat(value, 'f', 2, 64),
 		)
 
-		req, _ := http.NewRequest(http.MethodPost, url, nil)
+		req, err := http.NewRequest(http.MethodPost, url, nil)
+		if err != nil {
+			continue
+		}
+
 		req.Header.Set("Content-Type", "text/plain")
-		client.Do(req)
 
 		resp, err := client.Do(req)
 		if err != nil {
 			continue
 		}
 
-		resp.Body.Close()
+		resp.Body.Close() 
 	}
 
 	// Отправка counter
@@ -37,15 +40,18 @@ func ReportMetrics(metrics *Metrics) {
 			value,
 		)
 
-		req, _ := http.NewRequest(http.MethodPost, url, nil)
+		req, err := http.NewRequest(http.MethodPost, url, nil)
+		if err != nil {
+			continue
+		}
+
 		req.Header.Set("Content-Type", "text/plain")
-		client.Do(req)
 
 		resp, err := client.Do(req)
 		if err != nil {
 			continue
 		}
 
-		resp.Body.Close()
+		resp.Body.Close() 
 	}
 }
