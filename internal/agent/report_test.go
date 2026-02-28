@@ -13,7 +13,7 @@ import (
 	"resty.dev/v3"
 )
 
-func TestReportMetricsWithResty(t *testing.T) {
+func TestReportMetrics(t *testing.T) {
 	// Мапа для проверки полученных запросов
 	received := make(map[string]string)
 

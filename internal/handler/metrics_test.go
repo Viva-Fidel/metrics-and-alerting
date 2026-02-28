@@ -141,6 +141,7 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	memStore.SetGauge("TestGauge", 123.45)
 	memStore.SetGauge("TestGauge2", 67.89)
 	memStore.AddCounter("TestCounter", 100)
+	memStore.AddCounter("TestCounter", 50)
 
 	h := handler.MetricsHandler{MemStorage: memStore}
 
@@ -158,5 +159,5 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	body := w.Body.String()
 	assert.Contains(t, body, "TestGauge: 123.45")
 	assert.Contains(t, body, "TestGauge2: 67.89")
-	assert.Contains(t, body, "TestCounter: 100")
+	assert.Contains(t, body, "TestCounter: 150")
 }
