@@ -1,39 +1,27 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
-
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
-	"github.com/Viva-Fidel/metrics-and-alerting/pkg/storage"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
+	"github.com/gin-gonic/gin"
 )
 
 
-func main() {
+func setupRouter() *gin.Engine {
+	router := gin.Default()
 
-    router := http.NewServeMux()
-
-    // storage
-    memStorage := storage.NewMemStorage()
-
+    // storages
+    memStorage := repository.NewMemStorage()
 
 	// handlers
     handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		Storage: memStorage,
+		MemStorage: memStorage,
 	})
 
+	return router
+}
 
-    // server
-	server := http.Server{
-		Addr: ":8080",
-		Handler: router,
-	}
-    
-    fmt.Println("Сервер запущен")
-	err := server.ListenAndServe()
-	
-	// Вывод ошибок, если сервер не запустился
-	if err != nil {
-		fmt.Println("Ошибка при запуске сервера:", err)
-	}
+func main() {
+	r := setupRouter()
+    r.Run(":8080")
 }
