@@ -23,11 +23,17 @@ func main() {
 	})
 
 
-    server := http.Server{
+    // server
+	server := http.Server{
 		Addr: ":8080",
 		Handler: router,
 	}
     
-    fmt.Println("Сервер запушен")
-	server.ListenAndServe()
+    fmt.Println("Сервер запущен")
+	err := server.ListenAndServe()
+	
+	// Вывод ошибок, если сервер не запустился
+	if err != nil {
+		fmt.Println("Ошибка при запуске сервера:", err)
+	}
 }
