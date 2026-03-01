@@ -8,6 +8,7 @@ import (
 
 
 func setupRouter() *gin.Engine {
+
 	router := gin.Default()
 
     // storages
@@ -22,6 +23,7 @@ func setupRouter() *gin.Engine {
 }
 
 func main() {
+	parseFlags()
 	r := setupRouter()
-    r.Run(":8080")
+    r.Run(flagRunAddr)
 }
