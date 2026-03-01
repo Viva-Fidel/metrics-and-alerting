@@ -25,6 +25,7 @@ func main() {
 
 		// Отправка метрик на сервер
 		if elapsedTime >= reportInterval {
+			fmt.Println("Отправка метрик")
 			agent.ReportMetrics(metrics)
 			elapsedTime = 0
 		}
