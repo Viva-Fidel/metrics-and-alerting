@@ -1,4 +1,4 @@
-package storage
+package repository
 
 
 type MetricsStorage interface {
@@ -7,6 +7,8 @@ type MetricsStorage interface {
 
 	GetGauge(name string) (float64, bool)
 	GetCounter(name string) (int64, bool)
+
+	GetAll()(map[string]float64, map[string]int64)
 }
 
 
@@ -27,7 +29,7 @@ func (m *MemStorage) SetGauge(name string, value float64) {
 }
 
 func (m *MemStorage) AddCounter(name string, value int64) {
-	m.counters[name] = value
+	m.counters[name] += value
 }
 
 func (m *MemStorage) GetGauge(name string) (float64, bool) {
@@ -38,4 +40,8 @@ func (m *MemStorage) GetGauge(name string) (float64, bool) {
 func (m *MemStorage) GetCounter(name string) (int64, bool) {
 	val, ok := m.counters[name]
 	return val, ok
+}
+
+func (m *MemStorage) GetAll() (map[string]float64, map[string]int64) {
+	return m.gauges, m.counters
 }
