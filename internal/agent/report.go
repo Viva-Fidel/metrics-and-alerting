@@ -1,25 +1,22 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
 	"resty.dev/v3"
 )
 
-func ReportMetrics(metrics *Metrics, addr string) {
-	client := resty.New()
-	defer client.Close()
-
-	baseURL := fmt.Sprintf("http://%s", addr)
+func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) {
 
 	// Отправка gauge
 	for name, value := range metrics.Gauge {
 		_, err := client.R().
-			SetHeader("Content-Type", "text/plain").
-			Post(fmt.Sprintf(
-				"%s/update/gauge/%s/%s",
-				baseURL,
+		SetContext(ctx).
+		SetHeader("Content-Type", "text/plain").
+		Post(fmt.Sprintf(
+				"/update/gauge/%s/%s",
 				name,
 				strconv.FormatFloat(value, 'f', -1, 64),
 			))
@@ -31,10 +28,10 @@ func ReportMetrics(metrics *Metrics, addr string) {
 	// Отправка counter
 	for name, value := range metrics.Counter {
 		_, err := client.R().
-			SetHeader("Content-Type", "text/plain").
-			Post(fmt.Sprintf(
-				"%s/update/counter/%s/%d",
-				baseURL,
+		SetContext(ctx).
+		SetHeader("Content-Type", "text/plain").
+		Post(fmt.Sprintf(
+				"/update/counter/%s/%d",
 				name,
 				value,
 			))

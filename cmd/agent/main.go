@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
+	"resty.dev/v3"
 )
 
 
@@ -16,9 +21,24 @@ func main() {
 
 	elapsedTime := int64(0)
 
+	// Создание клиента resty
+	client := resty.New().SetBaseURL("http://" + flagRunAddr)
+	defer client.Close()
+
+	// Контекст для корректного закрытия
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
     fmt.Println("Агент запущен")
 
 	for {
+		select {
+		case <-ctx.Done():
+			fmt.Println("Завершение работы агента")
+			return
+		default:
+		}
+
 		// Забор метрик
 		agent.PollMetrics(metrics)
 
@@ -27,7 +47,7 @@ func main() {
 		// Отправка метрик на сервер
 		if elapsedTime >= reportInterval {
 			fmt.Println("Отправка метрик")
-			agent.ReportMetrics(metrics, flagRunAddr)
+			agent.ReportMetrics(ctx, client, metrics)
 			elapsedTime = 0
 		}
 
