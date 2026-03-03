@@ -27,7 +27,7 @@ func (m *MemStorage) SetGauge(name string, value float64) {
 }
 
 func (m *MemStorage) AddCounter(name string, value int64) {
-	m.counters[name] += value
+	m.counters[name] = value
 }
 
 func (m *MemStorage) GetGauge(name string) (float64, bool) {
