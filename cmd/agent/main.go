@@ -9,11 +9,12 @@ import (
 
 
 func main() {
+
+	parseFlags()
+
 	metrics := agent.NewMetrics()
 
-	pollInterval := 2 // Время обновления метрик
-	reportInterval := 10 // Отправка метрик с заданной частотой
-	elapsedTime := 0
+	elapsedTime := int64(0)
 
     fmt.Println("Агент запущен")
 
@@ -26,7 +27,7 @@ func main() {
 		// Отправка метрик на сервер
 		if elapsedTime >= reportInterval {
 			fmt.Println("Отправка метрик")
-			agent.ReportMetrics(metrics)
+			agent.ReportMetrics(metrics, flagRunAddr)
 			elapsedTime = 0
 		}
 

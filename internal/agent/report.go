@@ -7,18 +7,21 @@ import (
 	"resty.dev/v3"
 )
 
-func ReportMetrics(metrics *Metrics) {
+func ReportMetrics(metrics *Metrics, addr string) {
 	client := resty.New()
 	defer client.Close()
+
+	baseURL := fmt.Sprintf("http://%s", addr)
 
 	// Отправка gauge
 	for name, value := range metrics.Gauge {
 		_, err := client.R().
 			SetHeader("Content-Type", "text/plain").
 			Post(fmt.Sprintf(
-				"http://localhost:8080/update/gauge/%s/%s",
+				"%s/update/gauge/%s/%s",
+				baseURL,
 				name,
-				strconv.FormatFloat(value, 'f', 2, 64),
+				strconv.FormatFloat(value, 'f', -1, 64),
 			))
 		if err != nil {
 			continue
@@ -30,7 +33,8 @@ func ReportMetrics(metrics *Metrics) {
 		_, err := client.R().
 			SetHeader("Content-Type", "text/plain").
 			Post(fmt.Sprintf(
-				"http://localhost:8080/update/counter/%s/%d",
+				"%s/update/counter/%s/%d",
+				baseURL,
 				name,
 				value,
 			))
