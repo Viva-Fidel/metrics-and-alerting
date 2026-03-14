@@ -1,12 +1,12 @@
 module github.com/Viva-Fidel/metrics-and-alerting
 
-go 1.25
+go 1.24.13
 
 require (
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/stretchr/testify v1.11.1
-	resty.dev/v3 v3.0.0-beta.6
+	resty.dev/v3 v3.0.0-beta.5
 )
 
 require (
