@@ -14,7 +14,7 @@ var (
 
 func parseFlags(conf *config.Config) {
 
-    flag.StringVar(&flagRunAddr, "a", "localhost:8081", "server address")
+    flag.StringVar(&flagRunAddr, "a", "localhost:8080", "server address")
 	flag.Int64Var(&reportInterval, "r", 10, "report sending interval")
 	flag.Int64Var(&pollInterval, "p", 2, "report collecting interval")
 
