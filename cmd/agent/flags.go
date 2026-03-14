@@ -20,15 +20,15 @@ func parseFlags(conf *config.Config) {
 
     flag.Parse()
 
-	if envRunAddr := conf.Agent.ADDRESS; envRunAddr != "" {
+	if envRunAddr := conf.Agent.Address; envRunAddr != "" {
         flagRunAddr = envRunAddr
     }
 
-	if envReportInterval := conf.Agent.REPORT_INTERVAL; envReportInterval != 0 {
+	if envReportInterval := conf.Agent.ReportInterval; envReportInterval != 0 {
         reportInterval = envReportInterval
     }
 
-	if envPollInterval := conf.Agent.POLL_INTERVAL; envPollInterval != 0 {
+	if envPollInterval := conf.Agent.PollInterval; envPollInterval != 0 {
         pollInterval = envPollInterval
     }
 }
