@@ -14,7 +14,7 @@ func parseFlags(conf *config.Config) {
 
     flag.Parse()
 
-    if envRunAddr := conf.Server.Address; envRunAddr != "" {
-        flagRunAddr = envRunAddr
+    if conf.Server.Address != "" {
+        flagRunAddr = conf.Server.Address
     }
 }
