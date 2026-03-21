@@ -1,47 +1,37 @@
 package repository
 
 
-type MetricsStorage interface {
-	SetGauge(name string, value float64)
-	AddCounter(name string, value int64)
 
-	GetGauge(name string) (float64, bool)
-	GetCounter(name string) (int64, bool)
-
-	GetAll()(map[string]float64, map[string]int64)
-}
-
-
-type MemStorage struct {
+type MemRepository struct {
 	gauges   map[string]float64
 	counters map[string]int64
 }
 
-func NewMemStorage() *MemStorage {
-	return &MemStorage{
+func NewMemRepository() *MemRepository {
+	return &MemRepository{
 		gauges:   make(map[string]float64),
 		counters: make(map[string]int64),
 	}
 }
 
-func (m *MemStorage) SetGauge(name string, value float64) {
+func (m *MemRepository) SetGauge(name string, value float64) {
 	m.gauges[name] = value
 }
 
-func (m *MemStorage) AddCounter(name string, value int64) {
+func (m *MemRepository) AddCounter(name string, value int64) {
 	m.counters[name] += value
 }
 
-func (m *MemStorage) GetGauge(name string) (float64, bool) {
+func (m *MemRepository) GetGauge(name string) (float64, bool) {
 	val, ok := m.gauges[name]
 	return val, ok
 }
 
-func (m *MemStorage) GetCounter(name string) (int64, bool) {
+func (m *MemRepository) GetCounter(name string) (int64, bool) {
 	val, ok := m.counters[name]
 	return val, ok
 }
 
-func (m *MemStorage) GetAll() (map[string]float64, map[string]int64) {
+func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	return m.gauges, m.counters
 }

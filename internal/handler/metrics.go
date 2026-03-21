@@ -1,138 +1,138 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/domain"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	Gauge   = "gauge"
-	Counter = "counter"
-)
 
 
 type MetricsHandlerDeps struct {
-	MemStorage repository.MetricsStorage
+	*service.MetricsService
 }
 
 type MetricsHandler struct {
-	MemStorage repository.MetricsStorage
+	*service.MetricsService
 }
 
 func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	handler := &MetricsHandler{
-		MemStorage: deps.MemStorage,
+		MetricsService: deps.MetricsService,
 	}
 
-	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.Create()) // Создание
-	r.GET("/value/:metrics_type/:metrics_name", handler.GetMetric()) // Получение метрики
+	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.CreateMetricFromURL()) // Создание, с данными из строки
+	r.POST("/update", handler.CreateMetricFromJSON()) // Создание из JSON
+	r.GET("/value/:metrics_type/:metrics_name", handler.GetMetricFromURL()) // Получение метрики из строки
+	r.POST("/value", handler.GetMetricFromJSON()) // Получение метрики из JSON
 	r.GET("/", handler.GetAllMetrics()) // Получение всех метрик и вывод в html
 }
 
 
-func (handler *MetricsHandler) Create() gin.HandlerFunc {
+func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		metricType := c.Param("metrics_type")
+		name := c.Param("metrics_name")
+		value := c.Param("metrics_value")
 
-		// Получение данных из строки
-		metricsType := c.Param("metrics_type")
-		metricsName := c.Param("metrics_name")
-		metricsValue := c.Param("metrics_value")
-
-		// Сохранение метрик
-		switch metricsType {
-			case Gauge:
-				value, err := strconv.ParseFloat(metricsValue, 64)
-			    if err != nil {
-			    	c.String(http.StatusBadRequest, "Invalid gauge value")
-			    	return
-			    }
-			    handler.MemStorage.SetGauge(metricsName, value)
-			case Counter:
-				value, err := strconv.ParseInt(metricsValue, 10, 64)
-			    if err != nil {
-			    	c.String(http.StatusBadRequest, "Invalid counter value")
-			    	return
-			    }
-			    handler.MemStorage.AddCounter(metricsName, value)
-
-			default:
-				c.String(http.StatusBadRequest, "Unknown metric type")
-				return
-		}
-		
-		c.Header("Content-Type", "text/plain; charset=utf-8")
-		c.Status(http.StatusOK)
-
-	}
-}
-
-func (handler *MetricsHandler) GetMetric() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
-		metricsType := c.Param("metrics_type")
-		metricsName := c.Param("metrics_name")
-
-		// Получение метрик
-		switch metricsType {
-		case Gauge:
-			val, ok := handler.MemStorage.GetGauge(metricsName)
-			if !ok {
-				c.String(http.StatusNotFound, "Metric not found")
-				return
-			}
-			c.String(http.StatusOK, strconv.FormatFloat(val, 'f', -1, 64))
-
-		case Counter:
-			val, ok := handler.MemStorage.GetCounter(metricsName)
-			if !ok {
-				c.String(http.StatusNotFound, "Metric not found")
-				return
-			}
-			c.String(http.StatusOK, strconv.FormatInt(val, 10))
-
-		default:
-			c.String(http.StatusNotFound, "Unknown metric type")
+		if err := h.MetricsService.SetMetric(metricType, name, value); err != nil {
+			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
+
+		c.Status(http.StatusOK)
 	}
 }
 
-
-func (handler *MetricsHandler) GetAllMetrics() gin.HandlerFunc {
+func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Получаем все метрики
-		gauges, counters := handler.MemStorage.GetAll()
-
-		// Начало HTML
-		html := `<html>
-<head><title>Metrics</title></head>
-<body>
-<h1>All Metrics</h1>
-<h2>Gauges</h2>
-<ul>`
-
-		// Список gauge
-		for name, value := range gauges {
-			html += "<li>" + name + ": " + strconv.FormatFloat(value, 'f', -1, 64) + "</li>"
+		var body payload.MetricCreateRequest
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
+			return
 		}
 
-		html += `</ul>
-<h2>Counters</h2>
-<ul>`
-
-		// Список counter
-		for name, value := range counters {
-			html += "<li>" + name + ": " + strconv.FormatInt(value, 10) + "</li>"
+		if err := h.MetricsService.SetMetric(body.MetricsType, body.MetricsName, body.MetricsValue); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 		}
 
-		html += `</ul>
-</body>
-</html>`
-
-		// Отправляем HTML
-		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+		c.String(http.StatusOK, "OK")
 	}
 }
+
+func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var body payload.MetricGetRequest
+
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
+			return
+		}
+
+		metric, err := h.MetricsService.GetMetric(body.Type, body.ID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		switch metric.Type {
+		case service.Gauge:
+			c.String(http.StatusOK, strconv.FormatFloat(*metric.Gauge, 'f', -1, 64))
+		case service.Counter:
+			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrUnknownMetricType.Error()})
+		}
+	}
+}
+
+
+func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		metricsType := c.Param("metrics_type")
+		metricsName := c.Param("metrics_name")
+
+		metric, err := h.MetricsService.GetMetric(metricsType, metricsName)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+
+		switch metric.Type {
+		case service.Gauge:
+			c.String(http.StatusOK, strconv.FormatFloat(*metric.Gauge, 'f', -1, 64))
+		case service.Counter:
+			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrUnknownMetricType.Error()})
+		}
+	}
+}
+
+func (h *MetricsHandler) GetAllMetrics() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        gauges, counters := h.MetricsService.MetricsRepository.GetAll()
+
+        var b strings.Builder
+        b.WriteString("<html><head><title>Metrics</title></head><body>")
+        b.WriteString("<h1>All Metrics</h1><h2>Gauges</h2><ul>")
+        for name, val := range gauges {
+            b.WriteString(fmt.Sprintf("<li>%s: %f</li>", name, val))
+        }
+        b.WriteString("</ul><h2>Counters</h2><ul>")
+        for name, val := range counters {
+            b.WriteString(fmt.Sprintf("<li>%s: %d</li>", name, val))
+        }
+        b.WriteString("</ul></body></html>")
+
+        c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(b.String()))
+    }
+}
+

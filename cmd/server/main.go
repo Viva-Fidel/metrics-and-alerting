@@ -8,28 +8,31 @@ import (
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/logger"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 
 func setupRouter() *gin.Engine {
 
+	// Инициализация логгера
 	newLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 
 	router := gin.New()
 
 	// logger
     router.Use(logger.SlogMiddleware(newLogger))
     router.Use(gin.Recovery())
+
+	// repos
+	metricsRepository := repository.NewMemRepository()
+
+	// services
+	metricsService := service.NewMetricsService(metricsRepository)
 	
-
-    // storages
-    memStorage := repository.NewMemStorage()
-
 	// handlers
     handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		MemStorage: memStorage,
+		MetricsService: metricsService,
 	})
 
 	return router

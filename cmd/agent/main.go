@@ -15,12 +15,14 @@ import (
 
 
 func main() {
+	// Загружаем конфигурацию из env
 	conf, _ := config.LoadConfig()
 
+	// Считываем флаги и переопределяем конфигом
 	parseFlags(conf)
 
+	// Инициализация метрик
 	metrics := agent.NewMetrics()
-
 	elapsedTime := int64(0)
 
 	// Создание клиента resty
