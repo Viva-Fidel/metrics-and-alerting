@@ -54,7 +54,7 @@ func (s *MetricsService) SetMetric(metricType, name, value string) error {
 	return nil
 }
 
-func (s *MetricsService) GetMetric(metricType, name string) (*payload.Metric, error) {
+func (s *MetricsService) GetMetricUrl(metricType, name string) (*payload.Metric, error) {
 	switch metricType {
 	case Gauge:
 		val, ok := s.MetricsRepository.GetGauge(name)
@@ -62,6 +62,35 @@ func (s *MetricsService) GetMetric(metricType, name string) (*payload.Metric, er
 			return nil, domain.ErrMetricNotFound
 		}
 		return &payload.Metric{
+			Type:  Gauge,
+			Name:  name,
+			Gauge: &val,
+		}, nil
+
+	case Counter:
+		val, ok := s.MetricsRepository.GetCounter(name)
+		if !ok {
+			return nil, domain.ErrMetricNotFound
+		}
+		return &payload.Metric{
+			Type:  Counter,
+			Name:  name,
+			Count: &val,
+		}, nil
+
+	default:
+		return nil, domain.ErrUnknownMetricType
+	}
+}
+
+func (s *MetricsService) GetMetricJson(metricType, name string) (*payload.Metrics, error) {
+	switch metricType {
+	case Gauge:
+		val, ok := s.MetricsRepository.GetGauge(name)
+		if !ok {
+			return nil, domain.ErrMetricNotFound
+		}
+		return &payload.Metrics{
 			ID:    name,
 			MType: Gauge,
 			Value: &val,
@@ -72,7 +101,7 @@ func (s *MetricsService) GetMetric(metricType, name string) (*payload.Metric, er
 		if !ok {
 			return nil, domain.ErrMetricNotFound
 		}
-		return &payload.Metric{
+		return &payload.Metrics{
 			ID:    name,
 			MType: Counter,
 			Delta: &val,
