@@ -28,9 +28,9 @@ func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	}
 
 	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.CreateMetricFromURL()) // Создание, с данными из строки
-	r.POST("/update", handler.CreateMetricFromJSON()) // Создание из JSON
+	r.POST("/update/", handler.CreateMetricFromJSON()) // Создание из JSON
 	r.GET("/value/:metrics_type/:metrics_name", handler.GetMetricFromURL()) // Получение метрики из строки
-	r.POST("/value", handler.GetMetricFromJSON()) // Получение метрики из JSON
+	r.POST("/value/", handler.GetMetricFromJSON()) // Получение метрики из JSON
 	r.GET("/", handler.GetAllMetrics()) // Получение всех метрик и вывод в html
 }
 
