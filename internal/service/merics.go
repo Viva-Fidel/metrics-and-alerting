@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/domain"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 )
 
@@ -20,13 +21,6 @@ type MetricsRepository interface {
 	GetCounter(name string) (int64, bool)
 
 	GetAll() (map[string]float64, map[string]int64)
-}
-
-type Metric struct {
-	Type  string
-	Name  string
-	Gauge *float64
-	Count *int64
 }
 
 type MetricsService struct {
@@ -60,17 +54,17 @@ func (s *MetricsService) SetMetric(metricType, name, value string) error {
 	return nil
 }
 
-func (s *MetricsService) GetMetric(metricType, name string) (*Metric, error) {
+func (s *MetricsService) GetMetric(metricType, name string) (*payload.Metric, error) {
 	switch metricType {
 	case Gauge:
 		val, ok := s.MetricsRepository.GetGauge(name)
 		if !ok {
 			return nil, domain.ErrMetricNotFound
 		}
-		return &Metric{
-			Type:  Gauge,
-			Name:  name,
-			Gauge: &val,
+		return &payload.Metric{
+			ID:    name,
+			MType: Gauge,
+			Value: &val,
 		}, nil
 
 	case Counter:
@@ -78,10 +72,10 @@ func (s *MetricsService) GetMetric(metricType, name string) (*Metric, error) {
 		if !ok {
 			return nil, domain.ErrMetricNotFound
 		}
-		return &Metric{
-			Type:  Counter,
-			Name:  name,
-			Count: &val,
+		return &payload.Metric{
+			ID:    name,
+			MType: Counter,
+			Delta: &val,
 		}, nil
 
 	default:

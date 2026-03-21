@@ -2,8 +2,7 @@ package handler
 
 import (
 	"fmt"
-	"net/http"
-	"strconv"
+	"net/http"	
 	"strings"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/domain"
@@ -63,7 +62,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 			return
 		}
 
-		c.String(http.StatusOK, "OK")
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	}
 }
 
@@ -82,14 +81,7 @@ func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 			return
 		}
 
-		switch metric.Type {
-		case service.Gauge:
-			c.String(http.StatusOK, strconv.FormatFloat(*metric.Gauge, 'f', -1, 64))
-		case service.Counter:
-			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrUnknownMetricType.Error()})
-		}
+		c.JSON(http.StatusOK, metric)
 	}
 }
 
@@ -105,14 +97,7 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 			return
 		}
 
-		switch metric.Type {
-		case service.Gauge:
-			c.String(http.StatusOK, strconv.FormatFloat(*metric.Gauge, 'f', -1, 64))
-		case service.Counter:
-			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrUnknownMetricType.Error()})
-		}
+		c.JSON(http.StatusOK, metric)
 	}
 }
 

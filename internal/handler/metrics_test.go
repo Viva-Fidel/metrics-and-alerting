@@ -166,48 +166,59 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	})
 
 	tests := []struct {
-		name       string
-		body       string
-		wantStatus int
+		name         string
+		body         string
+		wantStatus   int
+		wantResponse string
 	}{
 		{
-			name: "valid gauge",
-			body: `{"metrics_type":"gauge","metrics_name":"Test","metrics_value":"123.45"}`,
-			wantStatus: http.StatusOK,
+			name:         "valid gauge",
+			body:         `{"metrics_type":"gauge","metrics_name":"TestGauge","metrics_value":"123.45"}`,
+			wantStatus:   http.StatusOK,
+			wantResponse: `{"status":"OK"}`,
 		},
 		{
-			name: "valid counter",
-			body: `{"metrics_type":"counter","metrics_name":"Test","metrics_value":"10"}`,
-			wantStatus: http.StatusOK,
+			name:         "valid counter",
+			body:         `{"metrics_type":"counter","metrics_name":"TestCounter","metrics_value":"10"}`,
+			wantStatus:   http.StatusOK,
+			wantResponse: `{"status":"OK"}`,
 		},
 		{
-			name: "invalid json",
-			body: `{"metrics_type":}`,
-			wantStatus: http.StatusBadRequest,
+			name:         "invalid JSON",
+			body:         `{"metrics_type":}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"invalid JSON body"}`, 
 		},
 		{
-			name: "unknown metric type",
-			body: `{"metrics_type":"unknown","metrics_name":"Test","metrics_value":"10"}`,
-			wantStatus: http.StatusBadRequest,
+			name:         "unknown metric type",
+			body:         `{"metrics_type":"unknown","metrics_name":"Test","metrics_value":"10"}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"unknown metric type"}`, 
 		},
 		{
-			name: "invalid value",
-			body: `{"metrics_type":"gauge","metrics_name":"Test","metrics_value":"abc"}`,
-			wantStatus: http.StatusBadRequest,
+			name:         "invalid gauge value",
+			body:         `{"metrics_type":"gauge","metrics_name":"TestGauge","metrics_value":"abc"}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"invalid gauge value"}`, 
+		},
+		{
+			name:         "invalid counter value",
+			body:         `{"metrics_type":"counter","metrics_name":"TestCounter","metrics_value":"abc"}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"invalid counter value"}`, 
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/update",
-				bytes.NewBufferString(tt.body),
-			)
+			req := httptest.NewRequest(http.MethodPost, "/update", bytes.NewBufferString(tt.body))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
+			assert.JSONEq(t, tt.wantResponse, w.Body.String())
 		})
 	}
 }
@@ -226,41 +237,50 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 		MetricsService: svc,
 	})
 
+
 	tests := []struct {
-		name         string
-		body         string
-		wantStatus   int
-		wantContains string
+		name          string
+		body          string
+		wantStatus    int
+		expectedJSON  string 
 	}{
 		{
-			name:         "existing gauge",
-			body:         `{"id":"TestGauge","type":"gauge"}`,
-			wantStatus:   http.StatusOK,
-			wantContains: "123.45",
+			name:       "existing gauge",
+			body:       `{"id":"TestGauge","type":"gauge"}`,
+			wantStatus: http.StatusOK,
+			expectedJSON: `{
+				"id":"TestGauge",
+				"type":"gauge",
+				"value":123.45
+			}`,
 		},
 		{
-			name:         "existing counter",
-			body:         `{"id":"TestCounter","type":"counter"}`,
-			wantStatus:   http.StatusOK,
-			wantContains: "10",
+			name:       "existing counter",
+			body:       `{"id":"TestCounter","type":"counter"}`,
+			wantStatus: http.StatusOK,
+			expectedJSON: `{
+				"id":"TestCounter",
+				"type":"counter",
+				"delta":10
+			}`,
 		},
 		{
-			name:         "not found",
-			body:         `{"id":"Unknown","type":"gauge"}`,
-			wantStatus:   http.StatusNotFound,
-			wantContains: "metric not found",
+			name:       "not found",
+			body:       `{"id":"Unknown","type":"gauge"}`,
+			wantStatus: http.StatusNotFound,
+			expectedJSON: `{"error":"metric not found"}`,
 		},
 		{
-			name:         "invalid json",
-			body:         `{"id":}`,
-			wantStatus:   http.StatusBadRequest,
-			wantContains: "invalid",
+			name:       "invalid json",
+			body:       `{"id":}`,
+			wantStatus: http.StatusBadRequest,
+			expectedJSON: `{"error":"invalid JSON body"}`,
 		},
 		{
-			name:         "unknown type",
-			body:         `{"id":"Test","type":"unknown"}`,
-			wantStatus:   http.StatusNotFound,
-			wantContains: "unknown metric type",
+			name:       "unknown type",
+			body:       `{"id":"Test","type":"unknown"}`,
+			wantStatus: http.StatusNotFound,
+			expectedJSON: `{"error":"unknown metric type"}`,
 		},
 	}
 
@@ -275,7 +295,9 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, tt.wantStatus, w.Code)
-			assert.Contains(t, strings.ToLower(w.Body.String()), tt.wantContains)
+			if tt.expectedJSON != "" {
+				assert.JSONEq(t, tt.expectedJSON, w.Body.String())
+			}
 		})
 	}
 }
