@@ -211,7 +211,7 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/update", bytes.NewBufferString(tt.body))
+			req := httptest.NewRequest(http.MethodPost, "/update/", bytes.NewBufferString(tt.body))
 			req.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
@@ -286,7 +286,7 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/value",
+			req := httptest.NewRequest(http.MethodPost, "/value/",
 				bytes.NewBufferString(tt.body),
 			)
 			req.Header.Set("Content-Type", "application/json")
