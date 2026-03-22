@@ -1,15 +1,5 @@
 package payload
 
-type MetricCreateRequest struct {
-	MetricsType  string `json:"metrics_type"`
-	MetricsName  string `json:"metrics_name"`
-	MetricsValue string `json:"metrics_value"`
-}
-
-type MetricGetRequest struct {
-	ID   string `json:"id"`
-	Type string `json:"type"`
-}
 
 type Metric struct {
 	Type  string
@@ -18,7 +8,7 @@ type Metric struct {
 	Count *int64
 }
 
-  type Metrics struct {
+type Metrics struct {
      ID    string   `json:"id"`              // имя метрики
      MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
      Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter

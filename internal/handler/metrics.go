@@ -10,6 +10,7 @@ import (
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
+	"encoding/json"
 )
 
 
@@ -41,7 +42,7 @@ func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 		name := c.Param("metrics_name")
 		value := c.Param("metrics_value")
 
-		if err := h.MetricsService.SetMetric(metricType, name, value); err != nil {
+		if err := h.MetricsService.SetMetricUrl(metricType, name, value); err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -52,16 +53,18 @@ func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 
 func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body payload.MetricCreateRequest
+		var body payload.Metrics
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
 			return
 		}
 
-		if err := h.MetricsService.SetMetric(body.MetricsType, body.MetricsName, body.MetricsValue); err != nil {
+		if err := h.MetricsService.SetMetricJson(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
+		_, _ = json.Marshal(body)
 
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	}
@@ -69,14 +72,14 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 
 func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body payload.MetricGetRequest
+		var body payload.Metrics
 
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
 			return
 		}
 
-		metric, err := h.MetricsService.GetMetricJson(body.Type, body.ID)
+		metric, err := h.MetricsService.GetMetricJson(body.MType, body.ID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return

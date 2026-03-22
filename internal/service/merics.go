@@ -32,7 +32,28 @@ func NewMetricsService(metricsRepository *repository.MemRepository) *MetricsServ
 }
 
 
-func (s *MetricsService) SetMetric(metricType, name, value string) error {
+func (s *MetricsService) SetMetricJson(m *payload.Metrics) error {
+	switch m.MType {
+	case Gauge:
+		if m.Value == nil {
+			return domain.ErrInvalidGaugeValue
+		}
+		s.MetricsRepository.SetGauge(m.ID, *m.Value)
+
+	case Counter:
+		if m.Delta == nil {
+			return domain.ErrInvalidCounterValue
+		}
+		s.MetricsRepository.AddCounter(m.ID, *m.Delta)
+
+	default:
+		return domain.ErrUnknownMetricType
+	}
+
+	return nil
+}
+
+func (s *MetricsService) SetMetricUrl(metricType, name, value string) error {
 	switch metricType {
 	case Gauge:
 		v, err := strconv.ParseFloat(value, 64)
