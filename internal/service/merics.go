@@ -32,7 +32,7 @@ func NewMetricsService(metricsRepository *repository.MemRepository) *MetricsServ
 }
 
 
-func (s *MetricsService) SetMetricJson(m *payload.Metrics) error {
+func (s *MetricsService) SetMetricJSON(m *payload.Metrics) error {
 	switch m.MType {
 	case Gauge:
 		if m.Value == nil {
@@ -53,7 +53,7 @@ func (s *MetricsService) SetMetricJson(m *payload.Metrics) error {
 	return nil
 }
 
-func (s *MetricsService) SetMetricUrl(metricType, name, value string) error {
+func (s *MetricsService) SetMetricURL(metricType, name, value string) error {
 	switch metricType {
 	case Gauge:
 		v, err := strconv.ParseFloat(value, 64)
@@ -75,7 +75,7 @@ func (s *MetricsService) SetMetricUrl(metricType, name, value string) error {
 	return nil
 }
 
-func (s *MetricsService) GetMetricUrl(metricType, name string) (*payload.Metric, error) {
+func (s *MetricsService) GetMetricURL(metricType, name string) (*payload.Metric, error) {
 	switch metricType {
 	case Gauge:
 		val, ok := s.MetricsRepository.GetGauge(name)
@@ -104,7 +104,7 @@ func (s *MetricsService) GetMetricUrl(metricType, name string) (*payload.Metric,
 	}
 }
 
-func (s *MetricsService) GetMetricJson(metricType, name string) (*payload.Metrics, error) {
+func (s *MetricsService) GetMetricJSON(metricType, name string) (*payload.Metrics, error) {
 	switch metricType {
 	case Gauge:
 		val, ok := s.MetricsRepository.GetGauge(name)

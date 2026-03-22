@@ -42,7 +42,7 @@ func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 		name := c.Param("metrics_name")
 		value := c.Param("metrics_value")
 
-		if err := h.MetricsService.SetMetricUrl(metricType, name, value); err != nil {
+		if err := h.MetricsService.SetMetricURL(metricType, name, value); err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
@@ -59,7 +59,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 			return
 		}
 
-		if err := h.MetricsService.SetMetricJson(&body); err != nil {
+		if err := h.MetricsService.SetMetricJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -79,7 +79,7 @@ func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 			return
 		}
 
-		metric, err := h.MetricsService.GetMetricJson(body.MType, body.ID)
+		metric, err := h.MetricsService.GetMetricJSON(body.MType, body.ID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
@@ -95,7 +95,7 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 		metricsType := c.Param("metrics_type")
 		metricsName := c.Param("metrics_name")
 
-		metric, err := h.MetricsService.GetMetricUrl(metricsType, metricsName)
+		metric, err := h.MetricsService.GetMetricURL(metricsType, metricsName)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
