@@ -26,7 +26,7 @@ func setupRouter() *gin.Engine {
     router.Use(gin.Recovery())
 
 	// gzip
-	router.Use(gzip.Gzip(gzip.DefaultCompression))
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
 
 	// repos
 	metricsRepository := repository.NewMemRepository()
