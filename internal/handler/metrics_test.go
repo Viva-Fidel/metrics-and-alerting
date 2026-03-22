@@ -166,49 +166,48 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	})
 
 	tests := []struct {
-		name         string
-		body         string
-		wantStatus   int
-		wantResponse string
-	}{
-		{
-			name:         "valid gauge",
-			body:         `{"metrics_type":"gauge","metrics_name":"TestGauge","metrics_value":"123.45"}`,
-			wantStatus:   http.StatusOK,
-			wantResponse: `{"status":"OK"}`,
-		},
-		{
-			name:         "valid counter",
-			body:         `{"metrics_type":"counter","metrics_name":"TestCounter","metrics_value":"10"}`,
-			wantStatus:   http.StatusOK,
-			wantResponse: `{"status":"OK"}`,
-		},
-		{
-			name:         "invalid JSON",
-			body:         `{"metrics_type":}`,
-			wantStatus:   http.StatusBadRequest,
-			wantResponse: `{"error":"invalid JSON body"}`, 
-		},
-		{
-			name:         "unknown metric type",
-			body:         `{"metrics_type":"unknown","metrics_name":"Test","metrics_value":"10"}`,
-			wantStatus:   http.StatusBadRequest,
-			wantResponse: `{"error":"unknown metric type"}`, 
-		},
-		{
-			name:         "invalid gauge value",
-			body:         `{"metrics_type":"gauge","metrics_name":"TestGauge","metrics_value":"abc"}`,
-			wantStatus:   http.StatusBadRequest,
-			wantResponse: `{"error":"invalid gauge value"}`, 
-		},
-		{
-			name:         "invalid counter value",
-			body:         `{"metrics_type":"counter","metrics_name":"TestCounter","metrics_value":"abc"}`,
-			wantStatus:   http.StatusBadRequest,
-			wantResponse: `{"error":"invalid counter value"}`, 
-		},
-	}
-
+	name         string
+	body         string
+	wantStatus   int
+	wantResponse string
+}{
+	{
+		name:         "valid gauge",
+		body:         `{"id":"TestGauge","type":"gauge","value":123.45}`,
+		wantStatus:   http.StatusOK,
+		wantResponse: `{"status":"OK"}`,
+	},
+	{
+		name:         "valid counter",
+		body:         `{"id":"TestCounter","type":"counter","delta":10}`,
+		wantStatus:   http.StatusOK,
+		wantResponse: `{"status":"OK"}`,
+	},
+	{
+		name:         "invalid JSON",
+		body:         `{"id":}`,
+		wantStatus:   http.StatusBadRequest,
+		wantResponse: `{"error":"invalid JSON body"}`,
+	},
+	{
+		name:         "unknown metric type",
+		body:         `{"id":"Test","type":"unknown","delta":10}`,
+		wantStatus:   http.StatusBadRequest,
+		wantResponse: `{"error":"unknown metric type"}`,
+	},
+	{
+		name:         "invalid gauge value",
+		body:         `{"id":"TestGauge","type":"gauge"}`,
+		wantStatus:   http.StatusBadRequest,
+		wantResponse: `{"error":"invalid gauge value"}`,
+	},
+	{
+		name:         "invalid counter value",
+		body:         `{"id":"TestCounter","type":"counter"}`,
+		wantStatus:   http.StatusBadRequest,
+		wantResponse: `{"error":"invalid counter value"}`,
+	},
+}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/update/", bytes.NewBufferString(tt.body))
