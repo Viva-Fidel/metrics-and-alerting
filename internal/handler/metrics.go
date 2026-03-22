@@ -53,7 +53,7 @@ func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 
 func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body payload.Metrics
+		var body payload.MetricsJSON
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
 			return
@@ -72,7 +72,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 
 func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var body payload.Metrics
+		var body payload.MetricsJSON
 
 		if err := c.ShouldBindJSON(&body); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
