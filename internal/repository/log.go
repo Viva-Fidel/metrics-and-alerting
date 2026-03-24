@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 
@@ -30,6 +31,10 @@ func (r *LogRepository) Load() ([]payload.MetricsJSON, error) {
 			return nil, nil
 		}
 		return nil, err
+	}
+
+	if len(bytes.TrimSpace(data)) == 0 {
+		return nil, nil
 	}
 
 	var metrics []payload.MetricsJSON

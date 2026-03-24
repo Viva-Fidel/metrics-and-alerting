@@ -26,7 +26,7 @@ func NewLogMetricsService(mem *repository.MemRepository, cfg LogMetricsConfig) *
 		memRepo:       mem,
 		fileRepo:      repository.NewLogRepository(cfg.FilePath),
 		storeInterval: cfg.StoreInterval,
-		lastSaved:     time.Now(),
+		lastSaved: time.Time{},
 	}
 }
 

@@ -31,7 +31,9 @@ func setupRouter() *gin.Engine {
 	})
 
 	if flagRestoreData {
-		_ = logMetricsService.Load() 
+		if err := logMetricsService.Load(); err != nil {
+			slog.Error("failed to restore metrics from file", "error", err, "path", flagFilePath)
+		}
 	}
 
 	metricsService := service.NewMetricsService(metricsRepository, logMetricsService)

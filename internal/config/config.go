@@ -17,13 +17,13 @@ type AgentConfig struct {
 }
 
 type ServerConfig struct {
-	Address string `env:"ADDRESS"`
+	Address *string `env:"ADDRESS"`
 }
 
 type LogMetricsConfig struct {
-	StoreInterval int64  `env:"STORE_INTERVAL"`     
-	FilePath      string `env:"FILE_STORAGE_PATH"`  
-	Restore       bool   `env:"RESTORE"`           
+	StoreInterval *int64  `env:"STORE_INTERVAL"`
+	FilePath      *string `env:"FILE_STORAGE_PATH"`
+	Restore       *bool   `env:"RESTORE"`
 }
 
 
