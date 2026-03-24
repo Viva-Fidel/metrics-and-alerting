@@ -16,23 +16,11 @@ func NewLogRepository(path string) *LogRepository {
 }
 
 func (r *LogRepository) Save(metrics []payload.MetricsJSON) error {
-    f, err := os.OpenFile(r.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-    if err != nil {
-        return err
-    }
-    defer f.Close()
-
-    for _, m := range metrics {
-        data, err := json.Marshal(m)
-        if err != nil {
-            return err
-        }
-        if _, err := f.Write(append(data, '\n')); err != nil {
-            return err
-        }
-    }
-
-    return nil
+	data, err := json.Marshal(metrics)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(r.filePath, data, 0o644)
 }
 
 func (r *LogRepository) Load() ([]payload.MetricsJSON, error) {
