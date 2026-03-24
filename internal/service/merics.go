@@ -50,8 +50,9 @@ func (s MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
 
 	case Counter:
 		if m.Delta == nil {
-			s.MetricsRepository.AddCounter(m.ID, *m.Delta)
+			return domain.ErrInvalidCounterValue
 		}
+		s.MetricsRepository.AddCounter(m.ID, *m.Delta)
 	default:
 		return domain.ErrUnknownMetricType
 	}
