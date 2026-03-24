@@ -25,14 +25,22 @@ type MetricsRepository interface {
 
 type MetricsService struct {
 	MetricsRepository *repository.MemRepository
+	LogMetricsService *LogMetricsService
 }
 
-func NewMetricsService(metricsRepository *repository.MemRepository) *MetricsService {
-	return &MetricsService{MetricsRepository: metricsRepository}
+func NewMetricsService(
+	metricsRepository *repository.MemRepository,
+	logService *LogMetricsService,
+) *MetricsService {
+	return &MetricsService{
+		MetricsRepository: metricsRepository,
+		LogMetricsService: logService,
+	}
 }
 
 
-func (s *MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
+func (s MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
+
 	switch m.MType {
 	case Gauge:
 		if m.Value == nil {
@@ -42,12 +50,14 @@ func (s *MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
 
 	case Counter:
 		if m.Delta == nil {
-			return domain.ErrInvalidCounterValue
+			s.MetricsRepository.AddCounter(m.ID, *m.Delta)
 		}
-		s.MetricsRepository.AddCounter(m.ID, *m.Delta)
-
 	default:
 		return domain.ErrUnknownMetricType
+	}
+
+	if s.LogMetricsService != nil {
+		_ = s.LogMetricsService.SaveIfNeeded()
 	}
 
 	return nil
@@ -72,6 +82,11 @@ func (s *MetricsService) SetMetricURL(metricType, name, value string) error {
 	default:
 		return domain.ErrUnknownMetricType
 	}
+
+	if s.LogMetricsService != nil {
+		_ = s.LogMetricsService.SaveIfNeeded()
+	}
+
 	return nil
 }
 

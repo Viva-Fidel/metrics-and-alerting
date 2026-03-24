@@ -7,6 +7,7 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Agent AgentConfig
+	LogMetrics LogMetricsConfig
 }
 
 type AgentConfig struct {
@@ -17,6 +18,12 @@ type AgentConfig struct {
 
 type ServerConfig struct {
 	Address string `env:"ADDRESS"`
+}
+
+type LogMetricsConfig struct {
+	StoreInterval int64  `env:"STORE_INTERVAL"`     
+	FilePath      string `env:"FILE_STORAGE_PATH"`  
+	Restore       bool   `env:"RESTORE"`           
 }
 
 
