@@ -53,6 +53,7 @@ func main() {
 			panic(err)
 		}
 	}
+	metricsRepository.StartSaver()
 
 	r := setupRouter(metricsRepository)
 	r.Run(flagRunAddr)
