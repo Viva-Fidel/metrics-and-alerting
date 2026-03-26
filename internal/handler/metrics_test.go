@@ -46,7 +46,7 @@ func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 
 			repo := repository.NewMemRepository()
-			svc := service.NewMetricsService(repo, nil)
+			svc := service.NewMetricsService(repo)
 
 			router := gin.New()
 			handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -71,7 +71,7 @@ func TestMetricsHandler_GetMetricFromURL(t *testing.T) {
 	repo.SetGauge("TestGauge", 123.45)
 	repo.AddCounter("TestCounter", 10)
 
-	svc := service.NewMetricsService(repo, nil)
+	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -132,7 +132,7 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	repo.AddCounter("TestCounter", 100)
 	repo.AddCounter("TestCounter", 50)
 
-	svc := service.NewMetricsService(repo, nil)
+	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -158,7 +158,7 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	repo := repository.NewMemRepository()
-	svc := service.NewMetricsService(repo, nil)
+	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -229,7 +229,7 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 	repo.SetGauge("TestGauge", 123.45)
 	repo.AddCounter("TestCounter", 10)
 
-	svc := service.NewMetricsService(repo, nil)
+	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
