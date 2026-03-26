@@ -55,7 +55,7 @@ func (m *MemRepository) ConfigureStorage(filePath string, storeIntervalSeconds i
 	}
 
 	m.storeInterval = time.Duration(storeIntervalSeconds) * time.Second
-	m.lastSave = time.Now()
+	m.lastSave = time.Now().Add(-m.storeInterval)
 }
 
 func (m *MemRepository) LoadFromFile() error {
