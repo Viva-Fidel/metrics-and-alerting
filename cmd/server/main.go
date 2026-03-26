@@ -14,7 +14,7 @@ import (
 )
 
 
-func setupRouter() *gin.Engine {
+func setupRouter(metricsRepository *repository.MemRepository) *gin.Engine {
 
 	// Инициализация логгера
 	newLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -26,9 +26,6 @@ func setupRouter() *gin.Engine {
 
 	// gzip
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
-
-	// repos
-	metricsRepository := repository.NewMemRepository()
 
 	// services
 	metricsService := service.NewMetricsService(metricsRepository)
@@ -43,9 +40,20 @@ func setupRouter() *gin.Engine {
 
 
 func main() {
+	// Загружаем конфигурацию из env
 	conf, _ := config.LoadConfig()
 
+	// Считываем флаги и переопределяем конфигом
 	parseFlags(conf)
-	r := setupRouter()
-    r.Run(flagRunAddr)
+
+	metricsRepository := repository.NewMemRepository()
+	metricsRepository.ConfigureStorage(flagFilePath, flagStoreInt)
+	if flagRestoreData {
+		if err := metricsRepository.LoadFromFile(); err != nil {
+			panic(err)
+		}
+	}
+
+	r := setupRouter(metricsRepository)
+	r.Run(flagRunAddr)
 }
