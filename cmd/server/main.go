@@ -15,35 +15,33 @@ import (
 
 
 func setupRouter() *gin.Engine {
+
+	// Инициализация логгера
 	newLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	router := gin.New()
 
-	router.Use(logger.SlogMiddleware(newLogger))
-	router.Use(gin.Recovery())
+	// logger
+    router.Use(logger.SlogMiddleware(newLogger))
+    router.Use(gin.Recovery())
+
+	// gzip
 	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
 
+	// repos
 	metricsRepository := repository.NewMemRepository()
 
-	logMetricsService := service.NewLogMetricsService(metricsRepository, service.LogMetricsConfig{
-		FilePath:      flagFilePath,
-		StoreInterval: flagStoreInt,
-		Restore:       flagRestoreData,
-	})
-
-	if flagRestoreData {
-		if err := logMetricsService.Load(); err != nil {
-			slog.Error("failed to restore metrics from file", "error", err, "path", flagFilePath)
-		}
-	}
-
-	metricsService := service.NewMetricsService(metricsRepository, logMetricsService)
-
-	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
+	// services
+	metricsService := service.NewMetricsService(metricsRepository)
+	
+	// handlers
+    handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
 		MetricsService: metricsService,
 	})
 
 	return router
 }
+
+
 func main() {
 	conf, _ := config.LoadConfig()
 
