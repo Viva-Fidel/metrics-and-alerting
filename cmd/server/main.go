@@ -1,37 +1,34 @@
 package main
 
 import (
-	"log/slog"
+	
+    "log/slog"
 	"os"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/logger"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/logging"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/gzip"
+	"github.com/gin-gonic/gin"
 )
 
 
-func setupRouter(metricsRepository *repository.MemRepository) *gin.Engine {
-
-	// Инициализация логгера
-	newLogger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+func setupRouter(metricsRepository *repository.MemRepository, logger *slog.Logger) *gin.Engine {
 	router := gin.New()
 
-	// logger
-    router.Use(logger.SlogMiddleware(newLogger))
-    router.Use(gin.Recovery())
+	router.Use(logging.SlogMiddleware(logger))
+	router.Use(gin.Recovery())
 
-	// gzip
-	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
+	router.Use(gzip.Gzip(
+		gzip.DefaultCompression,
+		gzip.WithDecompressFn(gzip.DefaultDecompressHandle),
+	))
 
-	// services
 	metricsService := service.NewMetricsService(metricsRepository)
-	
-	// handlers
-    handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
+
+	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
 		MetricsService: metricsService,
 	})
 
@@ -40,21 +37,28 @@ func setupRouter(metricsRepository *repository.MemRepository) *gin.Engine {
 
 
 func main() {
-	// Загружаем конфигурацию из env
-	conf, _ := config.LoadConfig()
+	// logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	// Считываем флаги и переопределяем конфигом
-	parseFlags(conf)
-
-	metricsRepository := repository.NewMemRepository()
-	metricsRepository.ConfigureStorage(flagFilePath, flagStoreInt)
-	if flagRestoreData {
-		if err := metricsRepository.LoadFromFile(); err != nil {
-			panic(err)
-		}
+	// conf
+	conf, err := config.LoadConfig()
+	if err != nil {
+		logger.Error("failed to load config", slog.Any("error", err))
 	}
-	metricsRepository.StartSaver()
 
-	r := setupRouter(metricsRepository)
-	r.Run(flagRunAddr)
+	// flags
+	flags := parseFlags(conf)
+
+	// repo
+	metricsRepository := repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
+
+
+	// router
+	r := setupRouter(metricsRepository, logger)
+
+	// server run
+	if err := r.Run(flags.RunAddr); err != nil {
+		logger.Error("failed to run server", slog.Any("error", err))
+		os.Exit(1)
+	}
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,67 +17,88 @@ type storedMetric struct {
 }
 
 type MemRepository struct {
-	mu sync.RWMutex
+	mu sync.RWMutex       // мьютекс для защиты доступа
+	gauges   map[string]float64 // метрики типа gauge
+	counters map[string]int64   // метрики типа counter
 
-	gauges   map[string]float64
-	counters map[string]int64
+	filePath      string        // файл для сохранения метрик
+	storeInterval time.Duration // интервал автосохранения
 
-	filePath      string
-	storeInterval time.Duration
+	saveMu sync.Mutex   // защита записи в файл
+	ticker *time.Ticker // тикер для автосохранения
+	stopCh chan struct{} // сигнал остановки тикера
 
-	saveMu sync.Mutex
-
-	ticker *time.Ticker
-	stopCh chan struct{}
+	logger *slog.Logger // логирование
 }
 
-func NewMemRepository() *MemRepository {
-	return &MemRepository{
-		gauges:   make(map[string]float64),
-		counters: make(map[string]int64),
+func NewMemRepository(logger *slog.Logger, filePath string, storeIntervalSeconds int64, restore bool) *MemRepository {
+	repo := &MemRepository{
+		logger:   logger,                 // логгер
+		gauges:   make(map[string]float64), // инициализация хранилища gauge
+		counters: make(map[string]int64),   // инициализация хранилища counter
 	}
+
+	repo.configureStorage(filePath, storeIntervalSeconds) // настройка файла и интервала сохранения
+
+	if restore {
+		// загрузка метрик из файла при старте
+		if err := repo.loadFromFile(); err != nil {
+			logger.Error("failed to restore metrics", slog.Any("error", err))
+		}
+	}
+
+	repo.startSaver() // запуск периодического сохранения (если задан интервал)
+
+	return repo
 }
 
 func (m *MemRepository) SetGauge(name string, value float64) {
 	m.mu.Lock()
-	m.gauges[name] = value
+	m.gauges[name] = value // сохраняем значение gauge
 	m.mu.Unlock()
 
+	// если автосохранение отключено, сохраняем сразу
 	if m.storeInterval == 0 {
-		_ = m.SaveToFile()
+		if err := m.SaveToFile(); err != nil {
+			m.logger.Error("failed to save metrics", slog.Any("error", err))
+		}
 	}
 }
 
 func (m *MemRepository) AddCounter(name string, value int64) {
 	m.mu.Lock()
-	m.counters[name] += value
+	m.counters[name] += value // увеличиваем значение counter
 	m.mu.Unlock()
 
+	// если автосохранение отключено, сохраняем сразу
 	if m.storeInterval == 0 {
-		_ = m.SaveToFile()
+		if err := m.SaveToFile(); err != nil {
+			m.logger.Error("failed to save metrics", slog.Any("error", err))
+		}
 	}
 }
 
 func (m *MemRepository) GetGauge(name string) (float64, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.RLock()         // блокировка на чтение
+	defer m.mu.RUnlock() // разблокировка после чтения
 
-	val, ok := m.gauges[name]
-	return val, ok
+	val, ok := m.gauges[name] // получаем значение gauge
+	return val, ok            // возвращаем значение и флаг
 }
 
 func (m *MemRepository) GetCounter(name string) (int64, bool) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.RLock()         // блокировка на чтение
+	defer m.mu.RUnlock() // разблокировка после чтения
 
-	val, ok := m.counters[name]
-	return val, ok
+	val, ok := m.counters[name] // получаем значение counter
+	return val, ok            // возвращаем значение и флаг
 }
 
 func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.RLock()         // блокировка на чтение
+	defer m.mu.RUnlock() // разблокировка после чтения
 
+	// создаём копии, чтобы внешние вызовы не меняли внутренние мапы
 	gaugesCopy := make(map[string]float64, len(m.gauges))
 	for k, v := range m.gauges {
 		gaugesCopy[k] = v
@@ -90,61 +112,65 @@ func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	return gaugesCopy, countersCopy
 }
 
-func (m *MemRepository) ConfigureStorage(filePath string, storeIntervalSeconds int64) {
-	m.filePath = filePath
+func (m *MemRepository) configureStorage(filePath string, storeIntervalSeconds int64) {
+	m.filePath = filePath // путь к файлу для сохранения метрик
+
 	if storeIntervalSeconds <= 0 {
-		m.storeInterval = 0
+		m.storeInterval = 0 // отключаем автосохранение
 		return
 	}
 
-	m.storeInterval = time.Duration(storeIntervalSeconds) * time.Second
+	m.storeInterval = time.Duration(storeIntervalSeconds) * time.Second // интервал автосохранения
 }
 
-func (m *MemRepository) StartSaver() {
+func (m *MemRepository) startSaver() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	// ничего не делаем, если файл не указан или интервал <= 0
 	if m.filePath == "" || m.storeInterval <= 0 {
 		return
 	}
+	// если тикер уже создан, повторно не запускаем
 	if m.ticker != nil {
 		return
 	}
 
-	m.stopCh = make(chan struct{})
-	m.ticker = time.NewTicker(m.storeInterval)
+	m.stopCh = make(chan struct{})           // канал для остановки тикера
+	m.ticker = time.NewTicker(m.storeInterval) // создаём тикер с заданным интервалом
 
 	go func() {
 		for {
 			select {
 			case <-m.ticker.C:
-				_ = m.SaveToFile()
+				_ = m.SaveToFile() // сохраняем метрики при каждом тикe
 			case <-m.stopCh:
-				m.ticker.Stop()
+				m.ticker.Stop() // остановка тикера
 				return
 			}
 		}
 	}()
 }
 
-func (m *MemRepository) LoadFromFile() error {
+func (m *MemRepository) loadFromFile() error {
 	if m.filePath == "" {
-		return nil
+		return nil // файл не указан — ничего не делаем
 	}
 
-	raw, err := os.ReadFile(m.filePath)
+	raw, err := os.ReadFile(m.filePath) // читаем файл
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return nil // если файла нет — считаем пустым хранилищем
 		}
-		return err
+		return err // другие ошибки чтения
 	}
 
 	var items []storedMetric
 	if err := json.Unmarshal(raw, &items); err != nil {
-		return err
+		return err // ошибка парсинга JSON
 	}
 
+	// временные мапы для загрузки
 	gauges := make(map[string]float64)
 	counters := make(map[string]int64)
 	for _, item := range items {
@@ -160,6 +186,7 @@ func (m *MemRepository) LoadFromFile() error {
 		}
 	}
 
+	// подменяем текущие мапы на загруженные
 	m.mu.Lock()
 	m.gauges = gauges
 	m.counters = counters
@@ -169,12 +196,13 @@ func (m *MemRepository) LoadFromFile() error {
 
 func (m *MemRepository) SaveToFile() error {
 	if m.filePath == "" {
-		return nil
+		return nil // файл не указан — ничего не сохраняем
 	}
 
 	m.saveMu.Lock()
-	defer m.saveMu.Unlock()
+	defer m.saveMu.Unlock() // защита записи в файл
 
+	// создаём копии текущих метрик для безопасной записи
 	m.mu.RLock()
 	gaugesCopy := make(map[string]float64, len(m.gauges))
 	for k, v := range m.gauges {
@@ -186,6 +214,7 @@ func (m *MemRepository) SaveToFile() error {
 	}
 	m.mu.RUnlock()
 
+	// формируем JSON
 	items := make([]storedMetric, 0, len(gaugesCopy)+len(countersCopy))
 	for name, val := range gaugesCopy {
 		v := val
@@ -204,17 +233,19 @@ func (m *MemRepository) SaveToFile() error {
 		})
 	}
 
-	raw, err := json.Marshal(items)
+	raw, err := json.Marshal(items) // сериализация в JSON
 	if err != nil {
 		return err
 	}
 
+	// создаём директорию, если нужно
 	dir := filepath.Dir(m.filePath)
 	base := filepath.Base(m.filePath)
 	if dir != "." && dir != "" {
 		_ = os.MkdirAll(dir, 0o755)
 	}
 
+	// запись через временный файл для атомарности
 	tmp, err := os.CreateTemp(dir, base+".tmp-*")
 	if err != nil {
 		return err
@@ -229,6 +260,8 @@ func (m *MemRepository) SaveToFile() error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
+
+	// атомарная замена основного файла
 	if err := os.Rename(tmpName, m.filePath); err != nil {
 		return err
 	}
