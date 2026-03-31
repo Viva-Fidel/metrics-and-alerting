@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,15 +18,15 @@ type storedMetric struct {
 }
 
 type MemRepository struct {
-	mu sync.RWMutex       // мьютекс для защиты доступа
+	mu       sync.RWMutex       // мьютекс для защиты доступа
 	gauges   map[string]float64 // метрики типа gauge
 	counters map[string]int64   // метрики типа counter
 
 	filePath      string        // файл для сохранения метрик
 	storeInterval time.Duration // интервал автосохранения
 
-	saveMu sync.Mutex   // защита записи в файл
-	ticker *time.Ticker // тикер для автосохранения
+	saveMu sync.Mutex    // защита записи в файл
+	ticker *time.Ticker  // тикер для автосохранения
 	stopCh chan struct{} // сигнал остановки тикера
 
 	logger *slog.Logger // логирование
@@ -33,7 +34,7 @@ type MemRepository struct {
 
 func NewMemRepository(logger *slog.Logger, filePath string, storeIntervalSeconds int64, restore bool) *MemRepository {
 	repo := &MemRepository{
-		logger:   logger,                 // логгер
+		logger:   logger,                   // логгер
 		gauges:   make(map[string]float64), // инициализация хранилища gauge
 		counters: make(map[string]int64),   // инициализация хранилища counter
 	}
@@ -91,7 +92,7 @@ func (m *MemRepository) GetCounter(name string) (int64, bool) {
 	defer m.mu.RUnlock() // разблокировка после чтения
 
 	val, ok := m.counters[name] // получаем значение counter
-	return val, ok            // возвращаем значение и флаг
+	return val, ok              // возвращаем значение и флаг
 }
 
 func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
@@ -136,14 +137,16 @@ func (m *MemRepository) startSaver() {
 		return
 	}
 
-	m.stopCh = make(chan struct{})           // канал для остановки тикера
+	m.stopCh = make(chan struct{})             // канал для остановки тикера
 	m.ticker = time.NewTicker(m.storeInterval) // создаём тикер с заданным интервалом
 
 	go func() {
 		for {
 			select {
 			case <-m.ticker.C:
-				_ = m.SaveToFile() // сохраняем метрики при каждом тикe
+				if err := m.SaveToFile(); err != nil {
+					m.logger.Error("failed to save metrics on ticker", slog.Any("error", err))
+				} // сохраняем метрики при каждом тикe
 			case <-m.stopCh:
 				m.ticker.Stop() // остановка тикера
 				return
@@ -162,12 +165,12 @@ func (m *MemRepository) loadFromFile() error {
 		if os.IsNotExist(err) {
 			return nil // если файла нет — считаем пустым хранилищем
 		}
-		return err // другие ошибки чтения
+		return fmt.Errorf("failed to read storage file %q: %w", m.filePath, err)
 	}
 
 	var items []storedMetric
 	if err := json.Unmarshal(raw, &items); err != nil {
-		return err // ошибка парсинга JSON
+		return fmt.Errorf("failed to unmarshal storage file %q: %w", m.filePath, err)
 	}
 
 	// временные мапы для загрузки
@@ -199,9 +202,6 @@ func (m *MemRepository) SaveToFile() error {
 		return nil // файл не указан — ничего не сохраняем
 	}
 
-	m.saveMu.Lock()
-	defer m.saveMu.Unlock() // защита записи в файл
-
 	// создаём копии текущих метрик для безопасной записи
 	m.mu.RLock()
 	gaugesCopy := make(map[string]float64, len(m.gauges))
@@ -213,6 +213,10 @@ func (m *MemRepository) SaveToFile() error {
 		countersCopy[k] = v
 	}
 	m.mu.RUnlock()
+
+	// Сериализуем конкурирующие записи в файл, не удерживая m.mu.
+	m.saveMu.Lock()
+	defer m.saveMu.Unlock() // защита записи в файл
 
 	// формируем JSON
 	items := make([]storedMetric, 0, len(gaugesCopy)+len(countersCopy))
@@ -235,35 +239,44 @@ func (m *MemRepository) SaveToFile() error {
 
 	raw, err := json.Marshal(items) // сериализация в JSON
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal metrics: %w", err)
 	}
 
 	// создаём директорию, если нужно
 	dir := filepath.Dir(m.filePath)
 	base := filepath.Base(m.filePath)
 	if dir != "." && dir != "" {
-		_ = os.MkdirAll(dir, 0o755)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			m.logger.Error("failed to create storage directory", slog.String("dir", dir), slog.Any("error", err))
+			return fmt.Errorf("failed to create storage directory %q: %w", dir, err)
+		}
 	}
 
 	// запись через временный файл для атомарности
 	tmp, err := os.CreateTemp(dir, base+".tmp-*")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create temp file in %q: %w", dir, err)
 	}
 	tmpName := tmp.Name()
-	defer func() { _ = os.Remove(tmpName) }()
+	defer func() {
+		if err := os.Remove(tmpName); err != nil && !os.IsNotExist(err) {
+			m.logger.Error("failed to remove temp file", slog.String("file", tmpName), slog.Any("error", err))
+		}
+	}()
 
 	if _, err := tmp.Write(raw); err != nil {
-		_ = tmp.Close()
-		return err
+		if closeErr := tmp.Close(); closeErr != nil {
+			m.logger.Error("failed to close temp file after write error", slog.String("file", tmpName), slog.Any("error", closeErr))
+		}
+		return fmt.Errorf("failed to write temp file %q: %w", tmpName, err)
 	}
 	if err := tmp.Close(); err != nil {
-		return err
+		return fmt.Errorf("failed to close temp file %q: %w", tmpName, err)
 	}
 
 	// атомарная замена основного файла
 	if err := os.Rename(tmpName, m.filePath); err != nil {
-		return err
+		return fmt.Errorf("failed to replace storage file %q: %w", m.filePath, err)
 	}
 	return nil
 }
