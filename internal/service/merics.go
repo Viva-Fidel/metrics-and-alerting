@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"

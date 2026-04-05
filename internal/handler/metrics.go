@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -16,15 +18,18 @@ type metricsPageData struct {
 
 type MetricsHandlerDeps struct {
 	*service.MetricsService
+	DB *sql.DB
 }
 
 type MetricsHandler struct {
 	*service.MetricsService
+	DB *sql.DB
 }
 
 func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	handler := &MetricsHandler{
 		MetricsService: deps.MetricsService,
+		DB:             deps.DB,
 	}
 
 	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.CreateMetricFromURL()) // Создание, с данными из строки
@@ -32,6 +37,24 @@ func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	r.GET("/value/:metrics_type/:metrics_name", handler.GetMetricFromURL()) // Получение метрики из строки
 	r.POST("/value/", handler.GetMetricFromJSON()) // Получение метрики из JSON
 	r.GET("/", handler.GetAllMetrics()) // Получение всех метрик и вывод в html
+	r.GET("/ping", handler.GetPing()) // Проверка соединения к бд
+	
+}
+
+func (h *MetricsHandler) GetPing() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if h.DB == nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		if err := h.DB.PingContext(c.Request.Context()); err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+
+		c.Status(http.StatusOK)
+	}
 }
 
 func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
@@ -102,7 +125,7 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 		case service.Counter:
 			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrUnknownMetricType.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("unknown metrics type")})
 		}
 	}
 }
