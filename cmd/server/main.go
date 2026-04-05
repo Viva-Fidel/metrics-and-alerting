@@ -10,6 +10,7 @@ import (
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/gzip"
 )
 
 
@@ -23,6 +24,9 @@ func setupRouter() *gin.Engine {
 	// logger
     router.Use(logger.SlogMiddleware(newLogger))
     router.Use(gin.Recovery())
+
+	// gzip
+	router.Use(gzip.Gzip(gzip.DefaultCompression, gzip.WithDecompressFn(gzip.DefaultDecompressHandle)))
 
 	// repos
 	metricsRepository := repository.NewMemRepository()
