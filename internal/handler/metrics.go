@@ -1,8 +1,7 @@
 package handler
 
 import (
-	"database/sql"
-	"errors"
+	"database/sql"	
 	"net/http"
 	"strconv"
 

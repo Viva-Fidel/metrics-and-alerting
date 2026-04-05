@@ -7,7 +7,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func NewDb(dsn string) (*sql.DB, error) {
+func NewDB(dsn string) (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("empty DATABASE_DSN")
 	}

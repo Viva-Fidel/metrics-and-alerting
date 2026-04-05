@@ -24,7 +24,7 @@ func main() {
 	// Инициализируем репозиторий метрик с настройками
 	metricsRepository := repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
 
-	db, err := db.NewDb(flags.Db)
+	db, err := db.NewDB(flags.Db)
     if err != nil {
     	logger.Error("failed to run init db", slog.Any("error", err))
     }
