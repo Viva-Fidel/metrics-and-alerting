@@ -2,8 +2,10 @@ package handler_test
 
 import (
 	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -45,13 +47,14 @@ func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 
-			repo := repository.NewMemRepository()
-			svc := service.NewMetricsService(repo)
+			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+            repo := repository.NewMemRepository(logger, "", 0, false)
+            svc := service.NewMetricsService(repo)
 
-			router := gin.New()
-			handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-				MetricsService: svc,
-			})
+            router := gin.New()
+            handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
+            	MetricsService: svc,
+            })
 
 			req := httptest.NewRequest(http.MethodPost, tt.url, nil)
 			w := httptest.NewRecorder()
@@ -67,7 +70,8 @@ func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 func TestMetricsHandler_GetMetricFromURL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	repo := repository.NewMemRepository()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    repo := repository.NewMemRepository(logger, "", 0, false)
 	repo.SetGauge("TestGauge", 123.45)
 	repo.AddCounter("TestCounter", 10)
 
@@ -126,13 +130,14 @@ func TestMetricsHandler_GetMetricFromURL(t *testing.T) {
 func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	repo := repository.NewMemRepository()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    repo := repository.NewMemRepository(logger, "", 0, false)
+    svc := service.NewMetricsService(repo)
+
 	repo.SetGauge("TestGauge", 123.45)
 	repo.SetGauge("TestGauge2", 67.89)
 	repo.AddCounter("TestCounter", 100)
 	repo.AddCounter("TestCounter", 50)
-
-	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -157,8 +162,9 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	repo := repository.NewMemRepository()
-	svc := service.NewMetricsService(repo)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    repo := repository.NewMemRepository(logger, "", 0, false)
+    svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -225,11 +231,11 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	repo := repository.NewMemRepository()
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    repo := repository.NewMemRepository(logger, "", 0, false)
+    svc := service.NewMetricsService(repo)
 	repo.SetGauge("TestGauge", 123.45)
 	repo.AddCounter("TestCounter", 10)
-
-	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{

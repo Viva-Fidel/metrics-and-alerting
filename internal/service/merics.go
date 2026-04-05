@@ -3,7 +3,6 @@ package service
 import (
 	"strconv"
 
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/domain"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 )
@@ -31,23 +30,22 @@ func NewMetricsService(metricsRepository *repository.MemRepository) *MetricsServ
 	return &MetricsService{MetricsRepository: metricsRepository}
 }
 
-
 func (s *MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
 	switch m.MType {
 	case Gauge:
 		if m.Value == nil {
-			return domain.ErrInvalidGaugeValue
+			return ErrInvalidGaugeValue
 		}
 		s.MetricsRepository.SetGauge(m.ID, *m.Value)
 
 	case Counter:
 		if m.Delta == nil {
-			return domain.ErrInvalidCounterValue
+			return ErrInvalidCounterValue
 		}
 		s.MetricsRepository.AddCounter(m.ID, *m.Delta)
 
 	default:
-		return domain.ErrUnknownMetricType
+		return ErrUnknownMetricType
 	}
 
 	return nil
@@ -58,19 +56,19 @@ func (s *MetricsService) SetMetricURL(metricType, name, value string) error {
 	case Gauge:
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return domain.ErrInvalidGaugeValue
+			return ErrInvalidGaugeValue
 		}
 		s.MetricsRepository.SetGauge(name, v)
 
 	case Counter:
 		v, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			return domain.ErrInvalidCounterValue
+			return ErrInvalidCounterValue
 		}
 		s.MetricsRepository.AddCounter(name, v)
 
 	default:
-		return domain.ErrUnknownMetricType
+		return ErrUnknownMetricType
 	}
 	return nil
 }
@@ -80,7 +78,7 @@ func (s *MetricsService) GetMetricURL(metricType, name string) (*payload.Metrics
 	case Gauge:
 		val, ok := s.MetricsRepository.GetGauge(name)
 		if !ok {
-			return nil, domain.ErrMetricNotFound
+			return nil, ErrMetricNotFound
 		}
 		return &payload.MetricsURL{
 			Type:  Gauge,
@@ -91,7 +89,7 @@ func (s *MetricsService) GetMetricURL(metricType, name string) (*payload.Metrics
 	case Counter:
 		val, ok := s.MetricsRepository.GetCounter(name)
 		if !ok {
-			return nil, domain.ErrMetricNotFound
+			return nil, ErrMetricNotFound
 		}
 		return &payload.MetricsURL{
 			Type:  Counter,
@@ -100,7 +98,7 @@ func (s *MetricsService) GetMetricURL(metricType, name string) (*payload.Metrics
 		}, nil
 
 	default:
-		return nil, domain.ErrUnknownMetricType
+		return nil, ErrUnknownMetricType
 	}
 }
 
@@ -109,7 +107,7 @@ func (s *MetricsService) GetMetricJSON(metricType, name string) (*payload.Metric
 	case Gauge:
 		val, ok := s.MetricsRepository.GetGauge(name)
 		if !ok {
-			return nil, domain.ErrMetricNotFound
+			return nil, ErrMetricNotFound
 		}
 		return &payload.MetricsJSON{
 			ID:    name,
@@ -120,7 +118,7 @@ func (s *MetricsService) GetMetricJSON(metricType, name string) (*payload.Metric
 	case Counter:
 		val, ok := s.MetricsRepository.GetCounter(name)
 		if !ok {
-			return nil, domain.ErrMetricNotFound
+			return nil, ErrMetricNotFound
 		}
 		return &payload.MetricsJSON{
 			ID:    name,
@@ -129,6 +127,6 @@ func (s *MetricsService) GetMetricJSON(metricType, name string) (*payload.Metric
 		}, nil
 
 	default:
-		return nil, domain.ErrUnknownMetricType
+		return nil, ErrUnknownMetricType
 	}
 }

@@ -1,19 +1,18 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/domain"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
-	"encoding/json"
 )
 
-
+type metricsPageData struct {
+	Gauges   map[string]float64
+	Counters map[string]int64
+}
 
 type MetricsHandlerDeps struct {
 	*service.MetricsService
@@ -35,7 +34,6 @@ func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	r.GET("/", handler.GetAllMetrics()) // Получение всех метрик и вывод в html
 }
 
-
 func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		metricType := c.Param("metrics_type")
@@ -55,7 +53,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body payload.MetricsJSON
 		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": ErrInvalidJSONBody.Error()})
 			return
 		}
 
@@ -63,8 +61,6 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-
-		_, _ = json.Marshal(body)
 
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	}
@@ -75,7 +71,7 @@ func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 		var body payload.MetricsJSON
 
 		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrInvalidJSONBody.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": ErrInvalidJSONBody.Error()})
 			return
 		}
 
@@ -88,7 +84,6 @@ func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 		c.JSON(http.StatusOK, metric)
 	}
 }
-
 
 func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -107,28 +102,22 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 		case service.Counter:
 			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": domain.ErrUnknownMetricType.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": service.ErrUnknownMetricType.Error()})
 		}
 	}
 }
 
 func (h *MetricsHandler) GetAllMetrics() gin.HandlerFunc {
-    return func(c *gin.Context) {
-        gauges, counters := h.MetricsService.MetricsRepository.GetAll()
+	return func(c *gin.Context) {
+		gauges, counters := h.MetricsService.MetricsRepository.GetAll()
 
-        var b strings.Builder
-        b.WriteString("<html><head><title>Metrics</title></head><body>")
-        b.WriteString("<h1>All Metrics</h1><h2>Gauges</h2><ul>")
-        for name, val := range gauges {
-            b.WriteString(fmt.Sprintf("<li>%s: %f</li>", name, val))
-        }
-        b.WriteString("</ul><h2>Counters</h2><ul>")
-        for name, val := range counters {
-            b.WriteString(fmt.Sprintf("<li>%s: %d</li>", name, val))
-        }
-        b.WriteString("</ul></body></html>")
-
-        c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(b.String()))
-    }
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		if err := metricsPageTmpl.Execute(c.Writer, metricsPageData{
+			Gauges:   gauges,
+			Counters: counters,
+		}); err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
 }
-
