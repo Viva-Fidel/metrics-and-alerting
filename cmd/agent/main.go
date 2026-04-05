@@ -9,13 +9,15 @@ import (
 	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
 	"resty.dev/v3"
 )
 
 
 func main() {
+	conf, _ := config.LoadConfig()
 
-	parseFlags()
+	parseFlags(conf)
 
 	metrics := agent.NewMetrics()
 
