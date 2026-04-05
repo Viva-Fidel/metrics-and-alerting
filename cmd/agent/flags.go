@@ -14,12 +14,15 @@ var (
 
 func parseFlags(conf *config.Config) {
 
+	// Флаги командной строки
     flag.StringVar(&flagRunAddr, "a", "localhost:8080", "server address")
 	flag.Int64Var(&reportInterval, "r", 10, "report sending interval")
 	flag.Int64Var(&pollInterval, "p", 2, "report collecting interval")
 
-    flag.Parse()
+    // Считываем флаги
+	flag.Parse()
 
+	// Переопределяем флаги значениями из конфигурации, если они указаны
 	if envRunAddr := conf.Agent.Address; envRunAddr != "" {
         flagRunAddr = envRunAddr
     }
