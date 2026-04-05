@@ -2,59 +2,37 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
 	"resty.dev/v3"
 )
 
-
 func main() {
-	conf, _ := config.LoadConfig()
+	// logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	parseFlags(conf)
+	// Загружаем параметры запуска
+	flags, err := config.LoadAgentFlags()
+	if err != nil {
+		logger.Error("failed to load config", slog.Any("error", err))
+	}
 
+	// Инициализируем хранилище
 	metrics := agent.NewMetrics()
 
-	elapsedTime := int64(0)
-
-	// Создание клиента resty
-	client := resty.New().SetBaseURL("http://" + flagRunAddr)
+	// Конфигурируем HTTP-клиент
+	client := resty.New().SetBaseURL("http://" + flags.RunAddr)
 	defer client.Close()
 
-	// Контекст для корректного закрытия
+	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-    fmt.Println("Агент запущен")
-
-	for {
-		select {
-		case <-ctx.Done():
-			fmt.Println("Завершение работы агента")
-			return
-		default:
-		}
-
-		// Забор метрик
-		agent.PollMetrics(metrics)
-
-		elapsedTime += pollInterval
-
-		// Отправка метрик на сервер
-		if elapsedTime >= reportInterval {
-			fmt.Println("Отправка метрик")
-			agent.ReportMetrics(ctx, client, metrics)
-			elapsedTime = 0
-		}
-
-		time.Sleep(time.Duration(pollInterval) * time.Second)
-	}
+	// Запускаем основной цикл сбора и отправки метрик
+	agent.Run(ctx, logger, client, metrics, flags.PollInterval, flags.ReportInterval)
 }
-
-
