@@ -76,7 +76,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body payload.MetricsJSON
 		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("invalid JSON body")})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
 			return
 		}
 
@@ -94,7 +94,7 @@ func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 		var body payload.MetricsJSON
 
 		if err := c.ShouldBindJSON(&body); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("invalid JSON body")})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
 			return
 		}
 
@@ -125,7 +125,7 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 		case service.Counter:
 			c.String(http.StatusOK, strconv.FormatInt(*metric.Count, 10))
 		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": errors.New("unknown metrics type")})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown metrics type"})
 		}
 	}
 }
