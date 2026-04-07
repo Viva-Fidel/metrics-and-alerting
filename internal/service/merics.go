@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 )
 
 const (
@@ -24,10 +23,10 @@ type MetricsRepository interface {
 }
 
 type MetricsService struct {
-	MetricsRepository *repository.MemRepository
+	MetricsRepository MetricsRepository
 }
 
-func NewMetricsService(metricsRepository *repository.MemRepository) *MetricsService {
+func NewMetricsService(metricsRepository MetricsRepository) *MetricsService {
 	return &MetricsService{MetricsRepository: metricsRepository}
 }
 
