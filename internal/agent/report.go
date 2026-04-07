@@ -5,12 +5,18 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/model"
 	"resty.dev/v3"
 )
+
+var retryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
 
 func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) {
 	batch := make([]models.Metrics, 0, len(metrics.Gauge)+len(metrics.Counter))
@@ -46,28 +52,34 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) 
 
 func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metrics) {
 	for name, value := range metrics.Gauge {
-		_, err := client.R().
-			SetContext(ctx).
-			SetHeader("Content-Type", "text/plain").
-			Post(fmt.Sprintf(
-				"/update/gauge/%s/%s",
-				name,
-				strconv.FormatFloat(value, 'f', -1, 64),
-			))
+		err := withRetry(ctx, func() error {
+			_, reqErr := client.R().
+				SetContext(ctx).
+				SetHeader("Content-Type", "text/plain").
+				Post(fmt.Sprintf(
+					"/update/gauge/%s/%s",
+					name,
+					strconv.FormatFloat(value, 'f', -1, 64),
+				))
+			return reqErr
+		}, isRetriableAgentError)
 		if err != nil {
 			continue
 		}
 	}
 
 	for name, value := range metrics.Counter {
-		_, err := client.R().
-			SetContext(ctx).
-			SetHeader("Content-Type", "text/plain").
-			Post(fmt.Sprintf(
-				"/update/counter/%s/%d",
-				name,
-				value,
-			))
+		err := withRetry(ctx, func() error {
+			_, reqErr := client.R().
+				SetContext(ctx).
+				SetHeader("Content-Type", "text/plain").
+				Post(fmt.Sprintf(
+					"/update/counter/%s/%d",
+					name,
+					value,
+				))
+			return reqErr
+		}, isRetriableAgentError)
 		if err != nil {
 			continue
 		}
@@ -85,15 +97,62 @@ func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.
 		return false
 	}
 
-	resp, err := client.R().
-		SetContext(ctx).
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Content-Encoding", "gzip").
-		SetBody(compressed.Bytes()).
-		Post("/updates/")
+	var resp *resty.Response
+	err := withRetry(ctx, func() error {
+		var reqErr error
+		resp, reqErr = client.R().
+			SetContext(ctx).
+			SetHeader("Content-Type", "application/json").
+			SetHeader("Content-Encoding", "gzip").
+			SetBody(compressed.Bytes()).
+			Post("/updates/")
+		return reqErr
+	}, isRetriableAgentError)
 	if err != nil {
 		return false
 	}
 
 	return resp.IsSuccess()
+}
+
+func withRetry(ctx context.Context, fn func() error, canRetry func(error) bool) error {
+	for attempt := 0; ; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+		if attempt >= len(retryDelays) || !canRetry(err) {
+			return err
+		}
+
+		timer := time.NewTimer(retryDelays[attempt])
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
+func isRetriableAgentError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		err = urlErr.Err
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		return true
+	}
+
+	type temporary interface {
+		Temporary() bool
+	}
+	var tempErr temporary
+	return errors.As(err, &tempErr) && tempErr.Temporary()
 }
