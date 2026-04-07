@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"database/sql"	
+	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -32,12 +32,13 @@ func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	}
 
 	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.CreateMetricFromURL()) // Создание, с данными из строки
-	r.POST("/update/", handler.CreateMetricFromJSON()) // Создание из JSON
+	r.POST("/update/", handler.CreateMetricFromJSON())                                          // Создание из JSON
+	r.POST("/updates/", handler.CreateMetricsFromJSONBatch())
 	r.GET("/value/:metrics_type/:metrics_name", handler.GetMetricFromURL()) // Получение метрики из строки
-	r.POST("/value/", handler.GetMetricFromJSON()) // Получение метрики из JSON
-	r.GET("/", handler.GetAllMetrics()) // Получение всех метрик и вывод в html
-	r.GET("/ping", handler.GetPing()) // Проверка соединения к бд
-	
+	r.POST("/value/", handler.GetMetricFromJSON())                          // Получение метрики из JSON
+	r.GET("/", handler.GetAllMetrics())                                     // Получение всех метрик и вывод в html
+	r.GET("/ping", handler.GetPing())                                       // Проверка соединения к бд
+
 }
 
 func (h *MetricsHandler) GetPing() gin.HandlerFunc {
@@ -85,6 +86,23 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
+	}
+}
+
+func (h *MetricsHandler) CreateMetricsFromJSONBatch() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var body []payload.MetricsJSON
+		if err := c.ShouldBindJSON(&body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON body"})
+			return
+		}
+
+		if err := h.MetricsService.SetMetricsJSONBatch(body); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, body)
 	}
 }
 

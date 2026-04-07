@@ -1,69 +1,102 @@
 package agent_test
 
 import (
-	"fmt"
+	"compress/gzip"
+	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/model"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"resty.dev/v3"
 )
 
-func TestReportMetrics(t *testing.T) {
-	// Мапа для проверки полученных запросов
-	received := make(map[string]string)
+func gzipReaderFromRequest(r *http.Request) (*gzip.Reader, error) {
+	return gzip.NewReader(r.Body)
+}
 
-	// Поднимаем тестовый HTTP сервер
+func TestReportMetrics_SendsBatch(t *testing.T) {
+	receivedPath := ""
+	receivedEncoding := ""
+	var receivedBatch []models.Metrics
+
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		received[r.URL.Path] = r.Header.Get("Content-Type")
+		receivedPath = r.URL.Path
+		receivedEncoding = r.Header.Get("Content-Encoding")
+		assert.Equal(t, "/updates/", r.URL.Path)
+
+		reader, err := gzipReaderFromRequest(r)
+		assert.NoError(t, err)
+		defer reader.Close()
+
+		raw, err := io.ReadAll(reader)
+		assert.NoError(t, err)
+		err = json.Unmarshal(raw, &receivedBatch)
+		assert.NoError(t, err)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
 
-	// Создаём метрики
 	metrics := &agent.Metrics{
 		Gauge:   map[string]float64{"TestGauge": 12.34},
 		Counter: map[string]int64{"TestCounter": 42},
 	}
 
-	// Создаём Resty client с базовым URL тестового сервера
-	client := resty.New().
-		SetBaseURL(ts.URL)
+	client := resty.New().SetBaseURL(ts.URL)
 	defer client.Close()
 
-	// Переопределяем функцию ReportMetrics для теста
-	reportMetrics := func(metrics *agent.Metrics) {
-		// Отправка gauge
-		for name, value := range metrics.Gauge {
-			_, err := client.R().
-				SetHeader("Content-Type", "text/plain").
-				Post(fmt.Sprintf("/update/gauge/%s/%s",
-					name,
-					strconv.FormatFloat(value, 'f', 2, 64),
-				))
-			require.NoError(t, err)
-		}
+	agent.ReportMetrics(context.Background(), client, metrics)
 
-		// Отправка counter
-		for name, value := range metrics.Counter {
-			_, err := client.R().
-				SetHeader("Content-Type", "text/plain").
-				Post(fmt.Sprintf("/update/counter/%s/%d",
-					name,
-					value,
-				))
-			require.NoError(t, err)
+	assert.Equal(t, "/updates/", receivedPath)
+	assert.Equal(t, "gzip", receivedEncoding)
+	assert.Len(t, receivedBatch, 2)
+}
+
+func TestReportMetrics_SkipsEmptyBatch(t *testing.T) {
+	requestsCount := 0
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestsCount++
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	client := resty.New().SetBaseURL(ts.URL)
+	defer client.Close()
+
+	agent.ReportMetrics(context.Background(), client, agent.NewMetrics())
+	assert.Equal(t, 0, requestsCount)
+}
+
+func TestReportMetrics_FallbackToLegacy(t *testing.T) {
+	received := make(map[string]int)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received[r.URL.Path]++
+
+		if r.URL.Path == "/updates/" {
+			w.WriteHeader(http.StatusNotFound)
+			return
 		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	metrics := &agent.Metrics{
+		Gauge:   map[string]float64{"TestGauge": 12.34},
+		Counter: map[string]int64{"TestCounter": 42},
 	}
 
-	// Вызываем
-	reportMetrics(metrics)
+	client := resty.New().SetBaseURL(ts.URL)
+	defer client.Close()
 
-	// Проверяем, что сервер получил правильные пути и заголовки
-	assert.Equal(t, "text/plain", received["/update/gauge/TestGauge/12.34"])
-	assert.Equal(t, "text/plain", received["/update/counter/TestCounter/42"])
+	agent.ReportMetrics(context.Background(), client, metrics)
+
+	assert.Equal(t, 1, received["/updates/"])
+	assert.Equal(t, 1, received["/update/gauge/TestGauge/12.34"])
+	assert.Equal(t, 1, received["/update/counter/TestCounter/42"])
 }

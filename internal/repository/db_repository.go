@@ -1,6 +1,10 @@
 package repository
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
+)
 
 type DBRepository struct {
 	db *sql.DB
@@ -28,6 +32,51 @@ func (p *DBRepository) AddCounter(name string, value int64) {
 		 SET type = 'counter', delta = metrics.delta + EXCLUDED.delta, value = NULL, updated_at = NOW()`,
 		name, value,
 	)
+}
+
+func (p *DBRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	for i := range metrics {
+		item := metrics[i]
+
+		switch item.MType {
+		case "gauge":
+			_, err = tx.Exec(
+				`INSERT INTO metrics (id, type, value, delta, updated_at)
+				 VALUES ($1, 'gauge', $2, NULL, NOW())
+				 ON CONFLICT (id) DO UPDATE
+				 SET type = 'gauge', value = EXCLUDED.value, delta = NULL, updated_at = NOW()`,
+				item.ID, *item.Value,
+			)
+		case "counter":
+			_, err = tx.Exec(
+				`INSERT INTO metrics (id, type, delta, value, updated_at)
+				 VALUES ($1, 'counter', $2, NULL, NOW())
+				 ON CONFLICT (id) DO UPDATE
+				 SET type = 'counter', delta = COALESCE(metrics.delta, 0) + EXCLUDED.delta, value = NULL, updated_at = NOW()`,
+				item.ID, *item.Delta,
+			)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	return err
 }
 
 func (p *DBRepository) GetGauge(name string) (float64, bool) {

@@ -15,6 +15,7 @@ const (
 type MetricsRepository interface {
 	SetGauge(name string, value float64)
 	AddCounter(name string, value int64)
+	ApplyBatch(metrics []payload.MetricsJSON) error
 
 	GetGauge(name string) (float64, bool)
 	GetCounter(name string) (int64, bool)
@@ -49,6 +50,29 @@ func (s *MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
 	}
 
 	return nil
+}
+
+func (s *MetricsService) SetMetricsJSONBatch(metrics []payload.MetricsJSON) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+
+	for i := range metrics {
+		switch metrics[i].MType {
+		case Gauge:
+			if metrics[i].Value == nil {
+				return errors.New("invalid gauge value")
+			}
+		case Counter:
+			if metrics[i].Delta == nil {
+				return errors.New("invalid counter value")
+			}
+		default:
+			return errors.New("unknown metric type")
+		}
+	}
+
+	return s.MetricsRepository.ApplyBatch(metrics)
 }
 
 func (s *MetricsService) SetMetricURL(metricType, name, value string) error {
