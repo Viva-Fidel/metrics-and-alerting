@@ -18,6 +18,7 @@ import (
 
 var retryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
 
+// ReportMetrics отправляет собранные метрики на сервер
 func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) {
 	batch := make([]models.Metrics, 0, len(metrics.Gauge)+len(metrics.Counter))
 
@@ -50,6 +51,7 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) 
 	sendMetricsLegacy(ctx, client, metrics)
 }
 
+// sendMetricsLegacy отправляет метрики по одному, используя старый формат REST-запросов.
 func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metrics) {
 	for name, value := range metrics.Gauge {
 		err := withRetry(ctx, func() error {
@@ -86,6 +88,7 @@ func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metri
 	}
 }
 
+// sendBatchMetrics отправляет пакет метрик в формате JSON c использованием gzip-сжатия.
 func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.Metrics) bool {
 	var compressed bytes.Buffer
 	zipWriter := gzip.NewWriter(&compressed)
@@ -115,6 +118,7 @@ func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.
 	return resp.IsSuccess()
 }
 
+// withRetry выполняет fn с повторными попытками, если ошибка подходит для повторения
 func withRetry(ctx context.Context, fn func() error, canRetry func(error) bool) error {
 	for attempt := 0; ; attempt++ {
 		err := fn()
@@ -135,6 +139,7 @@ func withRetry(ctx context.Context, fn func() error, canRetry func(error) bool) 
 	}
 }
 
+// isRetriableAgentError определяет, является ли ошибка временной
 func isRetriableAgentError(err error) bool {
 	if err == nil {
 		return false

@@ -18,6 +18,7 @@ type migration struct {
 	path    string
 }
 
+// RunMigrations применяет все новые миграции к базе данных.
 func RunMigrations(db *sql.DB) error {
 	if err := ensureSchemaMigrationsTable(db); err != nil {
 		return err
@@ -77,6 +78,7 @@ func RunMigrations(db *sql.DB) error {
 	return nil
 }
 
+// ensureSchemaMigrationsTable создаёт таблицу schema_migrations, если её нет.
 func ensureSchemaMigrationsTable(db *sql.DB) error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -91,6 +93,7 @@ func ensureSchemaMigrationsTable(db *sql.DB) error {
 	return nil
 }
 
+// detectMigrationsDir автоматически определяет директорию с миграциями.
 func detectMigrationsDir() (string, error) {
 	candidates := []string{"migrations", "./migrations", "../migrations", "../../migrations"}
 	for _, candidate := range candidates {
@@ -102,6 +105,7 @@ func detectMigrationsDir() (string, error) {
 	return "", fmt.Errorf("migrations directory not found")
 }
 
+// loadUpMigrations загружает и сортирует .up.sql миграции из указанной директории.
 func loadUpMigrations(dir string) ([]migration, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

@@ -25,6 +25,7 @@ func main() {
 	// Инициализируем репозиторий метрик с настройками
 	var metricsRepository service.MetricsRepository = repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
 
+	// Если указан DSN для подключения к базе данных, инициализируем БД, применяем миграции и пересоздаём репозиторий для работы с Postgres.
 	database, err := db.NewDB(flags.Db)
 	if err != nil {
 		logger.Error("failed to run init db", slog.Any("error", err))

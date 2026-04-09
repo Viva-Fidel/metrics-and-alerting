@@ -8,6 +8,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// NewDB инициализирует подключение к базе данных с повторными попытками пинга.
 func NewDB(dsn string) (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("empty DATABASE_DSN")
@@ -25,6 +26,7 @@ func NewDB(dsn string) (*sql.DB, error) {
 	return db, nil
 }
 
+// pingWithRetry делает попытки подключения к БД несколько раз с задержкой.
 func pingWithRetry(db *sql.DB, attempts int, delay time.Duration) error {
 	var lastErr error
 	for i := 0; i < attempts; i++ {

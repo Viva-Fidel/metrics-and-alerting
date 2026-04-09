@@ -81,23 +81,29 @@ func (m *MemRepository) AddCounter(name string, value int64) {
 	}
 }
 
+// ApplyBatch выполняет пакетное обновление метрик в памяти.
+// Принимает слайс метрик payload.MetricsJSON и обновляет значения gauge/counter.
 func (m *MemRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
 	if len(metrics) == 0 {
+		// Если метрик нет — ничего делать не нужно.
 		return nil
 	}
 
-	m.mu.Lock()
+	m.mu.Lock() // блокируем мьютекс на запись для исключения race condition
 	for i := range metrics {
 		item := metrics[i]
 		switch item.MType {
 		case "gauge":
+			// Для gauge просто устанавливаем новое значение.
 			m.gauges[item.ID] = *item.Value
 		case "counter":
+			// Для counter увеличиваем значение на дельту.
 			m.counters[item.ID] += *item.Delta
 		}
 	}
-	m.mu.Unlock()
+	m.mu.Unlock() // разблокировка мьютекса
 
+	// Если автосохранение выключено (интервал = 0), сохраняем в файл сразу.
 	if m.storeInterval == 0 {
 		if err := m.SaveToFile(); err != nil {
 			m.logger.Error("failed to save metrics", slog.Any("error", err))
@@ -105,7 +111,7 @@ func (m *MemRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
 		}
 	}
 
-	return nil
+	return nil // ошибки нет
 }
 
 func (m *MemRepository) GetGauge(name string) (float64, bool) {
