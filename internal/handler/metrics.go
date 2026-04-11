@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -17,18 +16,15 @@ type metricsPageData struct {
 
 type MetricsHandlerDeps struct {
 	*service.MetricsService
-	DB *sql.DB
 }
 
 type MetricsHandler struct {
 	*service.MetricsService
-	DB *sql.DB
 }
 
 func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	handler := &MetricsHandler{
 		MetricsService: deps.MetricsService,
-		DB:             deps.DB,
 	}
 
 	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.CreateMetricFromURL()) // Создание, с данными из строки
@@ -43,16 +39,10 @@ func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 
 func (h *MetricsHandler) GetPing() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if h.DB == nil {
+		if err := h.MetricsService.Ping(c.Request.Context()); err != nil {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
-
-		if err := h.DB.PingContext(c.Request.Context()); err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-
 		c.Status(http.StatusOK)
 	}
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -21,6 +22,8 @@ type MetricsRepository interface {
 	GetCounter(name string) (int64, bool)
 
 	GetAll() (map[string]float64, map[string]int64)
+
+	Ping(ctx context.Context) error
 }
 
 type MetricsService struct {
@@ -30,6 +33,11 @@ type MetricsService struct {
 // NewMetricsService создаёт новый сервис метрик на основе переданного репозитория.
 func NewMetricsService(metricsRepository MetricsRepository) *MetricsService {
 	return &MetricsService{MetricsRepository: metricsRepository}
+}
+
+// Ping проверяет доступность хранилища (для Postgres — соединение с БД).
+func (s *MetricsService) Ping(ctx context.Context) error {
+	return s.MetricsRepository.Ping(ctx)
 }
 
 // SetMetricJSON устанавливает значение метрики на основе структуры payload.MetricsJSON.

@@ -1,7 +1,9 @@
 package repository
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -146,6 +148,11 @@ func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	}
 
 	return gaugesCopy, countersCopy
+}
+
+// Ping для in-memory хранилища недоступен 
+func (m *MemRepository) Ping(ctx context.Context) error {
+	return errors.New("database connection check is not available for in-memory storage")
 }
 
 func (m *MemRepository) configureStorage(filePath string, storeIntervalSeconds int64) {

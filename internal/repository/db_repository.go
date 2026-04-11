@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"strings"
@@ -19,6 +20,11 @@ var dbRetryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Secon
 
 func NewDBRepository(db *sql.DB) *DBRepository {
 	return &DBRepository{db: db}
+}
+
+// Ping проверяет соединение с базой данных.
+func (p *DBRepository) Ping(ctx context.Context) error {
+	return p.db.PingContext(ctx)
 }
 
 // SetGauge записывает или обновляет gauge-метрику в базе данных.
