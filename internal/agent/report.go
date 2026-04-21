@@ -13,13 +13,14 @@ import (
 	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/model"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
 	"resty.dev/v3"
 )
 
 var retryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
 
 // ReportMetrics отправляет собранные метрики на сервер
-func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) {
+func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string) {
 	batch := make([]models.Metrics, 0, len(metrics.Gauge)+len(metrics.Counter))
 
 	for name, value := range metrics.Gauge {
@@ -44,25 +45,29 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics) 
 		return
 	}
 
-	if sendBatchMetrics(ctx, client, batch) {
+	if sendBatchMetrics(ctx, client, batch, hashKey) {
 		return
 	}
 
-	sendMetricsLegacy(ctx, client, metrics)
+	sendMetricsLegacy(ctx, client, metrics, hashKey)
 }
 
 // sendMetricsLegacy отправляет метрики по одному, используя старый формат REST-запросов.
-func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metrics) {
+func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string) {
 	for name, value := range metrics.Gauge {
 		err := withRetry(ctx, func() error {
-			_, reqErr := client.R().
+			req := client.R().
 				SetContext(ctx).
-				SetHeader("Content-Type", "text/plain").
-				Post(fmt.Sprintf(
-					"/update/gauge/%s/%s",
-					name,
-					strconv.FormatFloat(value, 'f', -1, 64),
-				))
+				SetHeader("Content-Type", "text/plain")
+			path := fmt.Sprintf(
+				"/update/gauge/%s/%s",
+				name,
+				strconv.FormatFloat(value, 'f', -1, 64),
+			)
+			if hashKey != "" {
+				req.SetHeader(security.HashHeader, security.BuildHash(nil, hashKey))
+			}
+			_, reqErr := req.Post(path)
 			return reqErr
 		}, isRetriableAgentError)
 		if err != nil {
@@ -72,14 +77,18 @@ func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metri
 
 	for name, value := range metrics.Counter {
 		err := withRetry(ctx, func() error {
-			_, reqErr := client.R().
+			req := client.R().
 				SetContext(ctx).
-				SetHeader("Content-Type", "text/plain").
-				Post(fmt.Sprintf(
-					"/update/counter/%s/%d",
-					name,
-					value,
-				))
+				SetHeader("Content-Type", "text/plain")
+			path := fmt.Sprintf(
+				"/update/counter/%s/%d",
+				name,
+				value,
+			)
+			if hashKey != "" {
+				req.SetHeader(security.HashHeader, security.BuildHash(nil, hashKey))
+			}
+			_, reqErr := req.Post(path)
 			return reqErr
 		}, isRetriableAgentError)
 		if err != nil {
@@ -89,7 +98,7 @@ func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metri
 }
 
 // sendBatchMetrics отправляет пакет метрик в формате JSON c использованием gzip-сжатия.
-func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.Metrics) bool {
+func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.Metrics, hashKey string) bool {
 	var compressed bytes.Buffer
 	zipWriter := gzip.NewWriter(&compressed)
 	if err := json.NewEncoder(zipWriter).Encode(batch); err != nil {
@@ -103,12 +112,15 @@ func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.
 	var resp *resty.Response
 	err := withRetry(ctx, func() error {
 		var reqErr error
-		resp, reqErr = client.R().
+		req := client.R().
 			SetContext(ctx).
 			SetHeader("Content-Type", "application/json").
 			SetHeader("Content-Encoding", "gzip").
-			SetBody(compressed.Bytes()).
-			Post("/updates/")
+			SetBody(compressed.Bytes())
+		if hashKey != "" {
+			req.SetHeader(security.HashHeader, security.BuildHash(compressed.Bytes(), hashKey))
+		}
+		resp, reqErr = req.Post("/updates/")
 		return reqErr
 	}, isRetriableAgentError)
 	if err != nil {

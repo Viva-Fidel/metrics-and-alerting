@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Собираем HTTP-роутер
-	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger))
+	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key)
 
 	// Запускаем HTTP-сервер
 	if err := r.Run(flags.RunAddr); err != nil {

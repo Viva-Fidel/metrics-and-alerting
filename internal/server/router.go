@@ -7,10 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc) *gin.Engine {
+func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc, hashKey string) *gin.Engine {
 	router := gin.New()
 
 	router.Use(middleware)
+	router.Use(HashMiddleware(hashKey))
 	router.Use(gin.Recovery())
 	router.Use(gzip.Gzip(
 		gzip.DefaultCompression,

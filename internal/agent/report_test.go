@@ -1,8 +1,11 @@
 package agent_test
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -15,21 +18,24 @@ import (
 	"resty.dev/v3"
 )
 
-func gzipReaderFromRequest(r *http.Request) (*gzip.Reader, error) {
-	return gzip.NewReader(r.Body)
-}
-
 func TestReportMetrics_SendsBatch(t *testing.T) {
 	receivedPath := ""
 	receivedEncoding := ""
+	receivedHash := ""
 	var receivedBatch []models.Metrics
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedPath = r.URL.Path
 		receivedEncoding = r.Header.Get("Content-Encoding")
+		receivedHash = r.Header.Get("HashSHA256")
 		assert.Equal(t, "/updates/", r.URL.Path)
 
-		reader, err := gzipReaderFromRequest(r)
+		compressedBody, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		expectedSum := sha256.Sum256(append(compressedBody, []byte("secret")...))
+		assert.Equal(t, hex.EncodeToString(expectedSum[:]), receivedHash)
+
+		reader, err := gzip.NewReader(bytes.NewReader(compressedBody))
 		assert.NoError(t, err)
 		defer reader.Close()
 
@@ -49,7 +55,7 @@ func TestReportMetrics_SendsBatch(t *testing.T) {
 	client := resty.New().SetBaseURL(ts.URL)
 	defer client.Close()
 
-	agent.ReportMetrics(context.Background(), client, metrics)
+	agent.ReportMetrics(context.Background(), client, metrics, "secret")
 
 	assert.Equal(t, "/updates/", receivedPath)
 	assert.Equal(t, "gzip", receivedEncoding)
@@ -68,7 +74,7 @@ func TestReportMetrics_SkipsEmptyBatch(t *testing.T) {
 	client := resty.New().SetBaseURL(ts.URL)
 	defer client.Close()
 
-	agent.ReportMetrics(context.Background(), client, agent.NewMetrics())
+	agent.ReportMetrics(context.Background(), client, agent.NewMetrics(), "")
 	assert.Equal(t, 0, requestsCount)
 }
 
@@ -94,7 +100,7 @@ func TestReportMetrics_FallbackToLegacy(t *testing.T) {
 	client := resty.New().SetBaseURL(ts.URL)
 	defer client.Close()
 
-	agent.ReportMetrics(context.Background(), client, metrics)
+	agent.ReportMetrics(context.Background(), client, metrics, "")
 
 	assert.Equal(t, 1, received["/updates/"])
 	assert.Equal(t, 1, received["/update/gauge/TestGauge/12.34"])

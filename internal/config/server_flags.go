@@ -7,7 +7,8 @@ type ServerFlags struct {
 	StoreInt    int64
 	FilePath    string
 	RestoreData bool
-	Db string
+	Db          string
+	Key         string
 }
 
 func LoadServerFlags() (*ServerFlags, error) {
@@ -22,8 +23,8 @@ func LoadServerFlags() (*ServerFlags, error) {
 	flag.Int64Var(&flags.StoreInt, "i", 300, "interval in seconds to save server metrics (0 = synchronous)")
 	flag.StringVar(&flags.FilePath, "f", "metrics.json", "path to file where server metrics are stored")
 	flag.BoolVar(&flags.RestoreData, "r", false, "load previously saved metrics on startup")
-
-    flag.StringVar(&flags.Db, "d", "", "database DSN")
+	flag.StringVar(&flags.Db, "d", "", "database DSN")
+	flag.StringVar(&flags.Key, "k", "", "hash key")
 
 	flag.Parse()
 
@@ -41,6 +42,9 @@ func LoadServerFlags() (*ServerFlags, error) {
 	}
 	if conf.Db.DATABASE_DSN != nil {
 		flags.Db = *conf.Db.DATABASE_DSN
+	}
+	if conf.Server.Key != "" {
+		flags.Key = conf.Server.Key
 	}
 
 	return flags, nil
