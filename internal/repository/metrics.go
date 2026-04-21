@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
 )
 
 type storedMetric struct {
@@ -77,6 +79,33 @@ func (m *MemRepository) AddCounter(name string, value int64) {
 			m.logger.Error("failed to save metrics", slog.Any("error", err))
 		}
 	}
+}
+
+func (m *MemRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+
+	m.mu.Lock()
+	for i := range metrics {
+		item := metrics[i]
+		switch item.MType {
+		case "gauge":
+			m.gauges[item.ID] = *item.Value
+		case "counter":
+			m.counters[item.ID] += *item.Delta
+		}
+	}
+	m.mu.Unlock()
+
+	if m.storeInterval == 0 {
+		if err := m.SaveToFile(); err != nil {
+			m.logger.Error("failed to save metrics", slog.Any("error", err))
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *MemRepository) GetGauge(name string) (float64, bool) {
