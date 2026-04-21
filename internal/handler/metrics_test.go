@@ -48,13 +48,13 @@ func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 
 			logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-            repo := repository.NewMemRepository(logger, "", 0, false)
-            svc := service.NewMetricsService(repo)
+			repo := repository.NewMemRepository(logger, "", 0, false)
+			svc := service.NewMetricsService(repo)
 
-            router := gin.New()
-            handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-            	MetricsService: svc,
-            })
+			router := gin.New()
+			handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
+				MetricsService: svc,
+			})
 
 			req := httptest.NewRequest(http.MethodPost, tt.url, nil)
 			w := httptest.NewRecorder()
@@ -66,12 +66,11 @@ func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 	}
 }
 
-
 func TestMetricsHandler_GetMetricFromURL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-    repo := repository.NewMemRepository(logger, "", 0, false)
+	repo := repository.NewMemRepository(logger, "", 0, false)
 	repo.SetGauge("TestGauge", 123.45)
 	repo.AddCounter("TestCounter", 10)
 
@@ -131,8 +130,8 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-    repo := repository.NewMemRepository(logger, "", 0, false)
-    svc := service.NewMetricsService(repo)
+	repo := repository.NewMemRepository(logger, "", 0, false)
+	svc := service.NewMetricsService(repo)
 
 	repo.SetGauge("TestGauge", 123.45)
 	repo.SetGauge("TestGauge2", 67.89)
@@ -158,13 +157,12 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	assert.Contains(t, body, "TestCounter: 150")
 }
 
-
 func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-    repo := repository.NewMemRepository(logger, "", 0, false)
-    svc := service.NewMetricsService(repo)
+	repo := repository.NewMemRepository(logger, "", 0, false)
+	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
@@ -172,48 +170,48 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	})
 
 	tests := []struct {
-	name         string
-	body         string
-	wantStatus   int
-	wantResponse string
-}{
-	{
-		name:         "valid gauge",
-		body:         `{"id":"TestGauge","type":"gauge","value":123.45}`,
-		wantStatus:   http.StatusOK,
-		wantResponse: `{"status":"OK"}`,
-	},
-	{
-		name:         "valid counter",
-		body:         `{"id":"TestCounter","type":"counter","delta":10}`,
-		wantStatus:   http.StatusOK,
-		wantResponse: `{"status":"OK"}`,
-	},
-	{
-		name:         "invalid JSON",
-		body:         `{"id":}`,
-		wantStatus:   http.StatusBadRequest,
-		wantResponse: `{"error":"invalid JSON body"}`,
-	},
-	{
-		name:         "unknown metric type",
-		body:         `{"id":"Test","type":"unknown","delta":10}`,
-		wantStatus:   http.StatusBadRequest,
-		wantResponse: `{"error":"unknown metric type"}`,
-	},
-	{
-		name:         "invalid gauge value",
-		body:         `{"id":"TestGauge","type":"gauge"}`,
-		wantStatus:   http.StatusBadRequest,
-		wantResponse: `{"error":"invalid gauge value"}`,
-	},
-	{
-		name:         "invalid counter value",
-		body:         `{"id":"TestCounter","type":"counter"}`,
-		wantStatus:   http.StatusBadRequest,
-		wantResponse: `{"error":"invalid counter value"}`,
-	},
-}
+		name         string
+		body         string
+		wantStatus   int
+		wantResponse string
+	}{
+		{
+			name:         "valid gauge",
+			body:         `{"id":"TestGauge","type":"gauge","value":123.45}`,
+			wantStatus:   http.StatusOK,
+			wantResponse: `{"status":"OK"}`,
+		},
+		{
+			name:         "valid counter",
+			body:         `{"id":"TestCounter","type":"counter","delta":10}`,
+			wantStatus:   http.StatusOK,
+			wantResponse: `{"status":"OK"}`,
+		},
+		{
+			name:         "invalid JSON",
+			body:         `{"id":}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"invalid JSON body"}`,
+		},
+		{
+			name:         "unknown metric type",
+			body:         `{"id":"Test","type":"unknown","delta":10}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"unknown metric type"}`,
+		},
+		{
+			name:         "invalid gauge value",
+			body:         `{"id":"TestGauge","type":"gauge"}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"invalid gauge value"}`,
+		},
+		{
+			name:         "invalid counter value",
+			body:         `{"id":"TestCounter","type":"counter"}`,
+			wantStatus:   http.StatusBadRequest,
+			wantResponse: `{"error":"invalid counter value"}`,
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/update/", bytes.NewBufferString(tt.body))
@@ -232,8 +230,8 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-    repo := repository.NewMemRepository(logger, "", 0, false)
-    svc := service.NewMetricsService(repo)
+	repo := repository.NewMemRepository(logger, "", 0, false)
+	svc := service.NewMetricsService(repo)
 	repo.SetGauge("TestGauge", 123.45)
 	repo.AddCounter("TestCounter", 10)
 
@@ -242,12 +240,11 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 		MetricsService: svc,
 	})
 
-
 	tests := []struct {
-		name          string
-		body          string
-		wantStatus    int
-		expectedJSON  string 
+		name         string
+		body         string
+		wantStatus   int
+		expectedJSON string
 	}{
 		{
 			name:       "existing gauge",
@@ -270,21 +267,21 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 			}`,
 		},
 		{
-			name:       "not found",
-			body:       `{"id":"Unknown","type":"gauge"}`,
-			wantStatus: http.StatusNotFound,
+			name:         "not found",
+			body:         `{"id":"Unknown","type":"gauge"}`,
+			wantStatus:   http.StatusNotFound,
 			expectedJSON: `{"error":"metric not found"}`,
 		},
 		{
-			name:       "invalid json",
-			body:       `{"id":}`,
-			wantStatus: http.StatusBadRequest,
+			name:         "invalid json",
+			body:         `{"id":}`,
+			wantStatus:   http.StatusBadRequest,
 			expectedJSON: `{"error":"invalid JSON body"}`,
 		},
 		{
-			name:       "unknown type",
-			body:       `{"id":"Test","type":"unknown"}`,
-			wantStatus: http.StatusNotFound,
+			name:         "unknown type",
+			body:         `{"id":"Test","type":"unknown"}`,
+			wantStatus:   http.StatusNotFound,
 			expectedJSON: `{"error":"unknown metric type"}`,
 		},
 	}
@@ -305,4 +302,71 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMetricsHandler_CreateMetricsFromJSONBatch(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	repo := repository.NewMemRepository(logger, "", 0, false)
+	svc := service.NewMetricsService(repo)
+
+	router := gin.New()
+	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
+		MetricsService: svc,
+	})
+
+	tests := []struct {
+		name         string
+		body         string
+		wantStatus   int
+		wantContains string
+	}{
+		{
+			name: "valid batch",
+			body: `[
+				{"id":"GaugeMetric","type":"gauge","value":100.5},
+				{"id":"CounterMetric","type":"counter","delta":7}
+			]`,
+			wantStatus:   http.StatusOK,
+			wantContains: `"id":"GaugeMetric"`,
+		},
+		{
+			name:         "invalid json",
+			body:         `{"id":}`,
+			wantStatus:   http.StatusBadRequest,
+			wantContains: `invalid JSON body`,
+		},
+		{
+			name:         "invalid gauge in batch",
+			body:         `[{"id":"GaugeMetric","type":"gauge"}]`,
+			wantStatus:   http.StatusBadRequest,
+			wantContains: `invalid gauge value`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, "/updates/", bytes.NewBufferString(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+			assert.Contains(t, w.Body.String(), tt.wantContains)
+		})
+	}
+
+	reqGauge := httptest.NewRequest(http.MethodGet, "/value/gauge/GaugeMetric", nil)
+	wGauge := httptest.NewRecorder()
+	router.ServeHTTP(wGauge, reqGauge)
+	assert.Equal(t, http.StatusOK, wGauge.Code)
+	assert.Equal(t, "100.5", wGauge.Body.String())
+
+	reqCounter := httptest.NewRequest(http.MethodGet, "/value/counter/CounterMetric", nil)
+	wCounter := httptest.NewRecorder()
+	router.ServeHTTP(wCounter, reqCounter)
+	assert.Equal(t, http.StatusOK, wCounter.Code)
+	assert.Equal(t, "7", wCounter.Body.String())
 }
