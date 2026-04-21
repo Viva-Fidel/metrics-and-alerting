@@ -8,6 +8,7 @@ type Config struct {
 	Server   ServerConfig
 	Agent AgentConfig
 	LogMetrics LogMetricsConfig
+	Db DbConfig
 }
 
 type AgentConfig struct {
@@ -26,6 +27,9 @@ type LogMetricsConfig struct {
 	Restore       *bool   `env:"RESTORE"`
 }
 
+type DbConfig struct {
+	DATABASE_DSN *string `env:"DATABASE_DSN"`
+}
 
 func LoadConfig() (*Config, error) {
 	cfg := Config{}
