@@ -5,17 +5,18 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Agent AgentConfig
+	Server     ServerConfig
+	Agent      AgentConfig
 	LogMetrics LogMetricsConfig
-	Db DbConfig
+	Db         DbConfig
 }
 
 type AgentConfig struct {
-	Address     string `env:"ADDRESS"`
-	ReportInterval int64 `env:"REPORT_INTERVAL"`
-	PollInterval   int64 `env:"POLL_INTERVAL"`
-	Key          string `env:"KEY"`
+	Address        string `env:"ADDRESS"`
+	ReportInterval int64  `env:"REPORT_INTERVAL"`
+	PollInterval   int64  `env:"POLL_INTERVAL"`
+	RateLimit      int    `env:"RATE_LIMIT"`
+	Key            string `env:"KEY"`
 }
 
 type ServerConfig struct {

@@ -21,9 +21,10 @@ var retryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
 
 // ReportMetrics отправляет собранные метрики на сервер
 func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string) {
-	batch := make([]models.Metrics, 0, len(metrics.Gauge)+len(metrics.Counter))
+	gauge, counter := metrics.Snapshot()
+	batch := make([]models.Metrics, 0, len(gauge)+len(counter))
 
-	for name, value := range metrics.Gauge {
+	for name, value := range gauge {
 		v := value
 		batch = append(batch, models.Metrics{
 			ID:    name,
@@ -32,7 +33,7 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, 
 		})
 	}
 
-	for name, value := range metrics.Counter {
+	for name, value := range counter {
 		v := value
 		batch = append(batch, models.Metrics{
 			ID:    name,
@@ -49,12 +50,18 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, 
 		return
 	}
 
-	sendMetricsLegacy(ctx, client, metrics, hashKey)
+	sendMetricsLegacy(ctx, client, gauge, counter, hashKey)
 }
 
 // sendMetricsLegacy отправляет метрики по одному, используя старый формат REST-запросов.
-func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string) {
-	for name, value := range metrics.Gauge {
+func sendMetricsLegacy(
+	ctx context.Context,
+	client *resty.Client,
+	gauge map[string]float64,
+	counter map[string]int64,
+	hashKey string,
+) {
+	for name, value := range gauge {
 		err := withRetry(ctx, func() error {
 			req := client.R().
 				SetContext(ctx).
@@ -75,7 +82,7 @@ func sendMetricsLegacy(ctx context.Context, client *resty.Client, metrics *Metri
 		}
 	}
 
-	for name, value := range metrics.Counter {
+	for name, value := range counter {
 		err := withRetry(ctx, func() error {
 			req := client.R().
 				SetContext(ctx).
