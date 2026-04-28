@@ -6,6 +6,7 @@ type AgentFlags struct {
 	RunAddr        string
 	ReportInterval int64
 	PollInterval   int64
+	Key            string
 }
 
 func LoadAgentFlags() (*AgentFlags, error) {
@@ -19,6 +20,7 @@ func LoadAgentFlags() (*AgentFlags, error) {
 	flag.StringVar(&flags.RunAddr, "a", "localhost:8080", "server address")
 	flag.Int64Var(&flags.ReportInterval, "r", 10, "report sending interval")
 	flag.Int64Var(&flags.PollInterval, "p", 2, "report collecting interval")
+	flag.StringVar(&flags.Key, "k", "", "hash key")
 	flag.Parse()
 
 	if conf.Agent.Address != "" {
@@ -29,6 +31,9 @@ func LoadAgentFlags() (*AgentFlags, error) {
 	}
 	if conf.Agent.PollInterval != 0 {
 		flags.PollInterval = conf.Agent.PollInterval
+	}
+	if conf.Agent.Key != "" {
+		flags.Key = conf.Agent.Key
 	}
 
 	return flags, nil

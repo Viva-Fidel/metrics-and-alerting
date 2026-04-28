@@ -15,10 +15,12 @@ type AgentConfig struct {
 	Address     string `env:"ADDRESS"`
 	ReportInterval int64 `env:"REPORT_INTERVAL"`
 	PollInterval   int64 `env:"POLL_INTERVAL"`
+	Key          string `env:"KEY"`
 }
 
 type ServerConfig struct {
 	Address *string `env:"ADDRESS"`
+	Key     string  `env:"KEY"`
 }
 
 type LogMetricsConfig struct {

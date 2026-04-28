@@ -15,6 +15,7 @@ func Run(
 	metrics *Metrics,
 	pollInterval int64,
 	reportInterval int64,
+	hashKey string,
 ) {
 	elapsedTime := int64(0)
 
@@ -33,7 +34,7 @@ func Run(
 
 		if elapsedTime >= reportInterval {
 			logger.Info("Отправка метрик")
-			ReportMetrics(ctx, client, metrics)
+			ReportMetrics(ctx, client, metrics, hashKey)
 			elapsedTime = 0
 		}
 
