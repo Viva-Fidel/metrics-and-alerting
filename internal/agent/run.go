@@ -32,14 +32,15 @@ func Run(
 
 	
 	for i := 0; i < rateLimit; i++ {
+		workerID := i + 1
 		workersWG.Add(1)
-		go func(workerID int) {
+		go func() {
 			defer workersWG.Done()
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
 				ReportMetrics(ctx, client, metrics, hashKey)
 			}
-		}(i + 1)
+		}()
 	}
 
 	// WaitGroup для ожидания завершения всех циклов

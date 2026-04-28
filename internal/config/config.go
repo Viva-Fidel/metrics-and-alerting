@@ -31,7 +31,11 @@ type LogMetricsConfig struct {
 }
 
 type DbConfig struct {
-	DATABASE_DSN *string `env:"DATABASE_DSN"`
+	DATABASE_DSN       *string `env:"DATABASE_DSN"`
+	MaxOpenConns       int     `env:"DATABASE_MAX_OPEN_CONNS" envDefault:"10"`
+	MaxIdleConns       int     `env:"DATABASE_MAX_IDLE_CONNS" envDefault:"5"`
+	ConnMaxLifetimeSec int64   `env:"DATABASE_CONN_MAX_LIFETIME_SEC" envDefault:"300"`
+	ConnMaxIdleTimeSec int64   `env:"DATABASE_CONN_MAX_IDLE_TIME_SEC" envDefault:"60"`
 }
 
 func LoadConfig() (*Config, error) {

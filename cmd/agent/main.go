@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
@@ -26,7 +27,14 @@ func main() {
 	metrics := agent.NewMetrics()
 
 	// Конфигурируем HTTP-клиент
-	client := resty.New().SetBaseURL("http://" + flags.RunAddr)
+	client := resty.New().
+		SetBaseURL("http://" + flags.RunAddr).
+		SetRetryCount(3).
+		SetRetryWaitTime(time.Second).
+		SetRetryMaxWaitTime(5 * time.Second).
+		AddRetryConditions(func(_ *resty.Response, err error) bool {
+			return err != nil
+		})
 	defer client.Close()
 
 	// Graceful shutdown

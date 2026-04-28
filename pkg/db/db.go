@@ -8,8 +8,15 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+type Options struct {
+	MaxOpenConns     int
+	MaxIdleConns     int
+	ConnMaxLifetime  time.Duration
+	ConnMaxIdleTime  time.Duration
+}
+
 // NewDB инициализирует подключение к базе данных с повторными попытками пинга.
-func NewDB(dsn string) (*sql.DB, error) {
+func NewDB(dsn string, opts Options) (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("empty DATABASE_DSN")
 	}
@@ -18,6 +25,11 @@ func NewDB(dsn string) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	db.SetMaxOpenConns(opts.MaxOpenConns)
+	db.SetMaxIdleConns(opts.MaxIdleConns)
+	db.SetConnMaxLifetime(opts.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(opts.ConnMaxIdleTime)
 
 	if err := pingWithRetry(db, 10, time.Second); err != nil {
 		return nil, err

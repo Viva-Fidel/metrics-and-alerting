@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/logging"
@@ -28,7 +29,12 @@ func main() {
 
 	// Если указан DSN - подключаемся к Postgres, при ошибке остаёмся на in-memory
 	if dsn := strings.TrimSpace(flags.Db); dsn != "" {
-		database, err := db.NewDB(dsn)
+		database, err := db.NewDB(dsn, db.Options{
+			MaxOpenConns:    flags.DbMaxOpenConns,
+			MaxIdleConns:    flags.DbMaxIdleConns,
+			ConnMaxLifetime: time.Duration(flags.DbConnMaxLifetimeSec) * time.Second,
+			ConnMaxIdleTime: time.Duration(flags.DbConnMaxIdleTimeSec) * time.Second,
+		})
 		if err != nil {
 			logger.Error("failed to run init db", slog.Any("error", err))
 			logger.Warn("using in-memory metrics storage")
