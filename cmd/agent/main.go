@@ -34,5 +34,5 @@ func main() {
 	defer stop()
 
 	// Запускаем основной цикл сбора и отправки метрик
-	agent.Run(ctx, logger, client, metrics, flags.PollInterval, flags.ReportInterval, flags.Key)
+	agent.Run(ctx, logger, client, metrics, flags.PollInterval, flags.ReportInterval, flags.RateLimit, flags.Key)
 }
