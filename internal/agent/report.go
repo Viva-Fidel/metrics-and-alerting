@@ -5,19 +5,16 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
-	"net/url"
 	"strconv"
-	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/model"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
 	"resty.dev/v3"
 )
 
-var retryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
+const metricTypeGauge = "gauge"
+const metricTypeCounter = "counter"
 
 // ReportMetrics отправляет собранные метрики на сервер
 func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string) {
@@ -28,7 +25,7 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, 
 		v := value
 		batch = append(batch, models.Metrics{
 			ID:    name,
-			MType: "gauge",
+			MType: metricTypeGauge,
 			Value: &v,
 		})
 	}
@@ -37,7 +34,7 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, 
 		v := value
 		batch = append(batch, models.Metrics{
 			ID:    name,
-			MType: "counter",
+			MType: metricTypeCounter,
 			Delta: &v,
 		})
 	}
@@ -62,42 +59,36 @@ func sendMetricsLegacy(
 	hashKey string,
 ) {
 	for name, value := range gauge {
-		err := withRetry(ctx, func() error {
-			req := client.R().
-				SetContext(ctx).
-				SetHeader("Content-Type", "text/plain")
-			path := fmt.Sprintf(
-				"/update/gauge/%s/%s",
-				name,
-				strconv.FormatFloat(value, 'f', -1, 64),
-			)
-			if hashKey != "" {
-				req.SetHeader(security.HashHeader, security.BuildHash(nil, hashKey))
-			}
-			_, reqErr := req.Post(path)
-			return reqErr
-		}, isRetriableAgentError)
+		req := client.R().
+			SetContext(ctx).
+			SetHeader("Content-Type", "text/plain")
+		path := fmt.Sprintf(
+			"/update/gauge/%s/%s",
+			name,
+			strconv.FormatFloat(value, 'f', -1, 64),
+		)
+		if hashKey != "" {
+			req.SetHeader(security.HashHeader, security.BuildHash(nil, hashKey))
+		}
+		_, err := req.Post(path)
 		if err != nil {
 			continue
 		}
 	}
 
 	for name, value := range counter {
-		err := withRetry(ctx, func() error {
-			req := client.R().
-				SetContext(ctx).
-				SetHeader("Content-Type", "text/plain")
-			path := fmt.Sprintf(
-				"/update/counter/%s/%d",
-				name,
-				value,
-			)
-			if hashKey != "" {
-				req.SetHeader(security.HashHeader, security.BuildHash(nil, hashKey))
-			}
-			_, reqErr := req.Post(path)
-			return reqErr
-		}, isRetriableAgentError)
+		req := client.R().
+			SetContext(ctx).
+			SetHeader("Content-Type", "text/plain")
+		path := fmt.Sprintf(
+			"/update/counter/%s/%d",
+			name,
+			value,
+		)
+		if hashKey != "" {
+			req.SetHeader(security.HashHeader, security.BuildHash(nil, hashKey))
+		}
+		_, err := req.Post(path)
 		if err != nil {
 			continue
 		}
@@ -117,66 +108,18 @@ func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.
 	}
 
 	var resp *resty.Response
-	err := withRetry(ctx, func() error {
-		var reqErr error
-		req := client.R().
-			SetContext(ctx).
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetBody(compressed.Bytes())
-		if hashKey != "" {
-			req.SetHeader(security.HashHeader, security.BuildHash(compressed.Bytes(), hashKey))
-		}
-		resp, reqErr = req.Post("/updates/")
-		return reqErr
-	}, isRetriableAgentError)
+	req := client.R().
+		SetContext(ctx).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Content-Encoding", "gzip").
+		SetBody(compressed.Bytes())
+	if hashKey != "" {
+		req.SetHeader(security.HashHeader, security.BuildHash(compressed.Bytes(), hashKey))
+	}
+	resp, err := req.Post("/updates")
 	if err != nil {
 		return false
 	}
 
 	return resp.IsSuccess()
-}
-
-// withRetry выполняет fn с повторными попытками, если ошибка подходит для повторения
-func withRetry(ctx context.Context, fn func() error, canRetry func(error) bool) error {
-	for attempt := 0; ; attempt++ {
-		err := fn()
-		if err == nil {
-			return nil
-		}
-		if attempt >= len(retryDelays) || !canRetry(err) {
-			return err
-		}
-
-		timer := time.NewTimer(retryDelays[attempt])
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return ctx.Err()
-		case <-timer.C:
-		}
-	}
-}
-
-// isRetriableAgentError определяет, является ли ошибка временной
-func isRetriableAgentError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	var urlErr *url.Error
-	if errors.As(err, &urlErr) {
-		err = urlErr.Err
-	}
-
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return true
-	}
-
-	type temporary interface {
-		Temporary() bool
-	}
-	var tempErr temporary
-	return errors.As(err, &tempErr) && tempErr.Temporary()
 }

@@ -8,6 +8,10 @@ type ServerFlags struct {
 	FilePath    string
 	RestoreData bool
 	Db          string
+	DbMaxOpenConns       int
+	DbMaxIdleConns       int
+	DbConnMaxLifetimeSec int64
+	DbConnMaxIdleTimeSec int64
 	Key         string
 }
 
@@ -43,6 +47,10 @@ func LoadServerFlags() (*ServerFlags, error) {
 	if conf.Db.DATABASE_DSN != nil {
 		flags.Db = *conf.Db.DATABASE_DSN
 	}
+	flags.DbMaxOpenConns = conf.Db.MaxOpenConns
+	flags.DbMaxIdleConns = conf.Db.MaxIdleConns
+	flags.DbConnMaxLifetimeSec = conf.Db.ConnMaxLifetimeSec
+	flags.DbConnMaxIdleTimeSec = conf.Db.ConnMaxIdleTimeSec
 	if conf.Server.Key != "" {
 		flags.Key = conf.Server.Key
 	}

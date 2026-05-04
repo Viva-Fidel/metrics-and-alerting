@@ -28,7 +28,7 @@ func TestReportMetrics_SendsBatch(t *testing.T) {
 		receivedPath = r.URL.Path
 		receivedEncoding = r.Header.Get("Content-Encoding")
 		receivedHash = r.Header.Get("HashSHA256")
-		assert.Equal(t, "/updates/", r.URL.Path)
+		assert.Equal(t, "/updates", r.URL.Path)
 
 		compressedBody, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
@@ -57,7 +57,7 @@ func TestReportMetrics_SendsBatch(t *testing.T) {
 
 	agent.ReportMetrics(context.Background(), client, metrics, "secret")
 
-	assert.Equal(t, "/updates/", receivedPath)
+	assert.Equal(t, "/updates", receivedPath)
 	assert.Equal(t, "gzip", receivedEncoding)
 	assert.Len(t, receivedBatch, 2)
 }
@@ -84,7 +84,7 @@ func TestReportMetrics_FallbackToLegacy(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		received[r.URL.Path]++
 
-		if r.URL.Path == "/updates/" {
+		if r.URL.Path == "/updates" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -102,7 +102,7 @@ func TestReportMetrics_FallbackToLegacy(t *testing.T) {
 
 	agent.ReportMetrics(context.Background(), client, metrics, "")
 
-	assert.Equal(t, 1, received["/updates/"])
+	assert.Equal(t, 1, received["/updates"])
 	assert.Equal(t, 1, received["/update/gauge/TestGauge/12.34"])
 	assert.Equal(t, 1, received["/update/counter/TestCounter/42"])
 }
