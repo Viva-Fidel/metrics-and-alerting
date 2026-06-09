@@ -9,6 +9,7 @@ type Config struct {
 	Agent      AgentConfig
 	LogMetrics LogMetricsConfig
 	Db         DbConfig
+	Audit      AuditConfig
 }
 
 type AgentConfig struct {
@@ -36,6 +37,11 @@ type DbConfig struct {
 	MaxIdleConns       int     `env:"DATABASE_MAX_IDLE_CONNS" envDefault:"5"`
 	ConnMaxLifetimeSec int64   `env:"DATABASE_CONN_MAX_LIFETIME_SEC" envDefault:"300"`
 	ConnMaxIdleTimeSec int64   `env:"DATABASE_CONN_MAX_IDLE_TIME_SEC" envDefault:"60"`
+}
+
+type AuditConfig struct {
+	FilePath *string `env:"AUDIT_FILE"`
+	URL      *string `env:"AUDIT_URL"`
 }
 
 func LoadConfig() (*Config, error) {

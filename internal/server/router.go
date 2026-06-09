@@ -1,13 +1,14 @@
 package server
 
 import (
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc, hashKey string) *gin.Engine {
+func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc, hashKey string, auditPublisher *audit.Publisher) *gin.Engine {
 	router := gin.New()
 
 	router.Use(middleware)
@@ -21,6 +22,7 @@ func NewRouter(metricsRepository service.MetricsRepository, middleware gin.Handl
 	metricsService := service.NewMetricsService(metricsRepository)
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
 		MetricsService: metricsService,
+		AuditPublisher: auditPublisher,
 	})
 
 	return router

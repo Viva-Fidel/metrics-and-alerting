@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/payload"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
@@ -16,15 +17,18 @@ type metricsPageData struct {
 
 type MetricsHandlerDeps struct {
 	*service.MetricsService
+	AuditPublisher *audit.Publisher
 }
 
 type MetricsHandler struct {
 	*service.MetricsService
+	auditPublisher *audit.Publisher
 }
 
 func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	handler := &MetricsHandler{
 		MetricsService: deps.MetricsService,
+		auditPublisher: deps.AuditPublisher,
 	}
 
 	r.POST("/update/:metrics_type/:metrics_name/:metrics_value", handler.CreateMetricFromURL()) // Создание, с данными из строки
@@ -58,6 +62,7 @@ func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 			return
 		}
 
+		h.notifyAudit(c, []string{name})
 		c.Status(http.StatusOK)
 	}
 }
@@ -75,6 +80,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 			return
 		}
 
+		h.notifyAudit(c, []string{body.ID})
 		c.JSON(http.StatusOK, gin.H{"status": "OK"})
 	}
 }
@@ -92,6 +98,11 @@ func (h *MetricsHandler) CreateMetricsFromJSONBatch() gin.HandlerFunc {
 			return
 		}
 
+		metricNames := make([]string, len(body))
+		for i := range body {
+			metricNames[i] = body[i].ID
+		}
+		h.notifyAudit(c, metricNames)
 		c.JSON(http.StatusOK, body)
 	}
 }
@@ -135,6 +146,14 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown metrics type"})
 		}
 	}
+}
+
+// notifyAudit отправляет событие всем наблюдателям
+func (h *MetricsHandler) notifyAudit(c *gin.Context, metrics []string) {
+	if h.auditPublisher == nil {
+		return
+	}
+	h.auditPublisher.Notify(metrics, c.ClientIP())
 }
 
 func (h *MetricsHandler) GetAllMetrics() gin.HandlerFunc {

@@ -13,6 +13,8 @@ type ServerFlags struct {
 	DbConnMaxLifetimeSec int64
 	DbConnMaxIdleTimeSec int64
 	Key         string
+	AuditFile   string
+	AuditURL    string
 }
 
 func LoadServerFlags() (*ServerFlags, error) {
@@ -29,6 +31,8 @@ func LoadServerFlags() (*ServerFlags, error) {
 	flag.BoolVar(&flags.RestoreData, "r", false, "load previously saved metrics on startup")
 	flag.StringVar(&flags.Db, "d", "", "database DSN")
 	flag.StringVar(&flags.Key, "k", "", "hash key")
+	flag.StringVar(&flags.AuditFile, "audit-file", "", "path to audit log file")
+	flag.StringVar(&flags.AuditURL, "audit-url", "", "URL to send audit logs")
 
 	flag.Parse()
 
@@ -53,6 +57,12 @@ func LoadServerFlags() (*ServerFlags, error) {
 	flags.DbConnMaxIdleTimeSec = conf.Db.ConnMaxIdleTimeSec
 	if conf.Server.Key != "" {
 		flags.Key = conf.Server.Key
+	}
+	if conf.Audit.FilePath != nil {
+		flags.AuditFile = *conf.Audit.FilePath
+	}
+	if conf.Audit.URL != nil {
+		flags.AuditURL = *conf.Audit.URL
 	}
 
 	return flags, nil
