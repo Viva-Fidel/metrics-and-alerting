@@ -163,7 +163,7 @@ func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	return gaugesCopy, countersCopy
 }
 
-// Ping для in-memory хранилища недоступен 
+// Ping для in-memory хранилища недоступен
 func (m *MemRepository) Ping(ctx context.Context) error {
 	return errors.New("database connection check is not available for in-memory storage")
 }
@@ -300,7 +300,7 @@ func (m *MemRepository) SaveToFile() error {
 			return fmt.Errorf("failed to create storage directory %q: %w", dir, err)
 		}
 	}
-    // создаём временный файл
+	// создаём временный файл
 	tmp, err := os.CreateTemp(dir, base+".tmp-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file in %q: %w", dir, err)
@@ -311,7 +311,7 @@ func (m *MemRepository) SaveToFile() error {
 			m.logger.Error("failed to remove temp file", slog.String("file", tmpName), slog.Any("error", err))
 		}
 	}()
-    
+
 	// блокировка на чтение
 	m.mu.RLock()
 	err = writeMetricsJSON(tmp, m.gauges, m.counters)

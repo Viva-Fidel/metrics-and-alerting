@@ -3,18 +3,18 @@ package config
 import "flag"
 
 type ServerFlags struct {
-	RunAddr     string
-	StoreInt    int64
-	FilePath    string
-	RestoreData bool
-	Db          string
+	RunAddr              string
+	StoreInt             int64
+	FilePath             string
+	RestoreData          bool
+	Db                   string
 	DbMaxOpenConns       int
 	DbMaxIdleConns       int
 	DbConnMaxLifetimeSec int64
 	DbConnMaxIdleTimeSec int64
-	Key         string
-	AuditFile   string
-	AuditURL    string
+	Key                  string
+	AuditFile            string
+	AuditURL             string
 }
 
 func LoadServerFlags() (*ServerFlags, error) {

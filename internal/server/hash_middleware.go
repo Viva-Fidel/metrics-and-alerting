@@ -51,4 +51,3 @@ func HashMiddleware(key string) gin.HandlerFunc {
 		c.Header(security.HashHeader, security.BuildHash(writer.body.Bytes(), key))
 	}
 }
-

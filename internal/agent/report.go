@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/model"
+	models "github.com/Viva-Fidel/metrics-and-alerting/internal/model"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
 	"resty.dev/v3"
 )

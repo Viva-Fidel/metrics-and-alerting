@@ -9,10 +9,10 @@ import (
 )
 
 type Options struct {
-	MaxOpenConns     int
-	MaxIdleConns     int
-	ConnMaxLifetime  time.Duration
-	ConnMaxIdleTime  time.Duration
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
 }
 
 // NewDB инициализирует подключение к базе данных с повторными попытками пинга.
