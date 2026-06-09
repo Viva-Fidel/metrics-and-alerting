@@ -60,13 +60,9 @@ func (p *Publisher) Notify(metrics []string, ipAddress string) {
 	}
 
 	p.mu.RLock()
-	observers := make([]Observer, 0, len(p.observers))
-	for _, o := range p.observers {
-		observers = append(observers, o)
-	}
-	p.mu.RUnlock()
+	defer p.mu.RUnlock()
 
-	for _, o := range observers {
+	for _, o := range p.observers {
 		o.Update(event)
 	}
 }

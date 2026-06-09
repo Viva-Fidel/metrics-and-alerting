@@ -1,6 +1,9 @@
 package server
 
 import (
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
@@ -25,5 +28,11 @@ func NewRouter(metricsRepository service.MetricsRepository, middleware gin.Handl
 		AuditPublisher: auditPublisher,
 	})
 
+	registerPprof(router)
+
 	return router
+}
+
+func registerPprof(router *gin.Engine) {
+	router.GET("/debug/pprof/*any", gin.WrapH(http.DefaultServeMux))
 }
