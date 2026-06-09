@@ -12,12 +12,14 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// DBRepository хранит метрики в PostgreSQL.
 type DBRepository struct {
 	db *sql.DB
 }
 
 var dbRetryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
 
+// NewDBRepository создаёт репозиторий метрик на основе подключения к БД.
 func NewDBRepository(db *sql.DB) *DBRepository {
 	return &DBRepository{db: db}
 }

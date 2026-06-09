@@ -1,3 +1,4 @@
+// Package server собирает HTTP-роутер сервиса сбора метрик.
 package server
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// NewRouter создаёт и настраивает gin.Engine с маршрутами метрик, middleware и pprof.
 func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc, hashKey string, auditPublisher *audit.Publisher) *gin.Engine {
 	router := gin.New()
 

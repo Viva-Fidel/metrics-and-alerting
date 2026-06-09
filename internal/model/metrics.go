@@ -1,10 +1,14 @@
+// Package models содержит доменные типы метрик.
 package models
 
 const (
+	// Counter — тип метрики-счётчика.
 	Counter = "counter"
-	Gauge   = "gauge"
+	// Gauge — тип метрики с плавающей точкой.
+	Gauge = "gauge"
 )
 
+// Metrics описывает метрику для сериализации в JSON.
 type Metrics struct {
 	ID    string   `json:"id"`
 	MType string   `json:"type"`

@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// URLObserver отправляет события аудита на внешний HTTP-эндпоинт.
 type URLObserver struct {
 	url string
 }

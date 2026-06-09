@@ -1,3 +1,4 @@
+// Package repository реализует хранилища метрик в памяти и в PostgreSQL.
 package repository
 
 import (
@@ -34,6 +35,7 @@ type storedCounterMetric struct {
 	Delta int64  `json:"delta"`
 }
 
+// MemRepository хранит метрики в памяти с опциональным сохранением в файл.
 type MemRepository struct {
 	mu       sync.RWMutex       // мьютекс для защиты доступа
 	gauges   map[string]float64 // метрики типа gauge
@@ -49,6 +51,7 @@ type MemRepository struct {
 	logger *slog.Logger // логирование
 }
 
+// NewMemRepository создаёт in-memory хранилище метрик.
 func NewMemRepository(logger *slog.Logger, filePath string, storeIntervalSeconds int64, restore bool) *MemRepository {
 	repo := &MemRepository{
 		logger:   logger,                   // логгер
@@ -70,6 +73,7 @@ func NewMemRepository(logger *slog.Logger, filePath string, storeIntervalSeconds
 	return repo
 }
 
+// SetGauge устанавливает значение gauge-метрики.
 func (m *MemRepository) SetGauge(name string, value float64) {
 	m.mu.Lock()
 	m.gauges[name] = value // сохраняем значение gauge
@@ -83,6 +87,7 @@ func (m *MemRepository) SetGauge(name string, value float64) {
 	}
 }
 
+// AddCounter увеличивает counter-метрику на заданное значение.
 func (m *MemRepository) AddCounter(name string, value int64) {
 	m.mu.Lock()
 	m.counters[name] += value // увеличиваем значение counter
@@ -129,6 +134,7 @@ func (m *MemRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
 	return nil // ошибки нет
 }
 
+// GetGauge возвращает значение gauge-метрики по имени.
 func (m *MemRepository) GetGauge(name string) (float64, bool) {
 	m.mu.RLock()         // блокировка на чтение
 	defer m.mu.RUnlock() // разблокировка после чтения
@@ -137,6 +143,7 @@ func (m *MemRepository) GetGauge(name string) (float64, bool) {
 	return val, ok            // возвращаем значение и флаг
 }
 
+// GetCounter возвращает значение counter-метрики по имени.
 func (m *MemRepository) GetCounter(name string) (int64, bool) {
 	m.mu.RLock()         // блокировка на чтение
 	defer m.mu.RUnlock() // разблокировка после чтения
@@ -145,6 +152,7 @@ func (m *MemRepository) GetCounter(name string) (int64, bool) {
 	return val, ok              // возвращаем значение и флаг
 }
 
+// GetAll возвращает копии всех gauge- и counter-метрик.
 func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	m.mu.RLock()         // блокировка на чтение
 	defer m.mu.RUnlock() // разблокировка после чтения
@@ -163,7 +171,7 @@ func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	return gaugesCopy, countersCopy
 }
 
-// Ping для in-memory хранилища недоступен
+// Ping для in-memory хранилища всегда возвращает ошибку.
 func (m *MemRepository) Ping(ctx context.Context) error {
 	return errors.New("database connection check is not available for in-memory storage")
 }
@@ -284,6 +292,7 @@ func writeMetricsJSON(w io.Writer, gauges map[string]float64, counters map[strin
 	return err
 }
 
+// SaveToFile атомарно сохраняет метрики в файл.
 func (m *MemRepository) SaveToFile() error {
 	if m.filePath == "" {
 		return nil // файл не указан — ничего не сохраняем

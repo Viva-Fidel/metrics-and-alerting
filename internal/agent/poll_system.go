@@ -8,6 +8,7 @@ import (
 )
 
 // Ссобирает системные метрики
+// PollSystemMetrics собирает системные метрики (CPU, память и др.).
 func PollSystemMetrics(metrics *Metrics) error {
 	vm, err := mem.VirtualMemory()
 	if err != nil {

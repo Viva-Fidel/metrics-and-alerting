@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику работы с метриками.
 package service
 
 import (
@@ -9,10 +10,13 @@ import (
 )
 
 const (
-	Gauge   = "gauge"
+	// Gauge — тип метрики с плавающей точкой, значение перезаписывается.
+	Gauge = "gauge"
+	// Counter — тип метрики-счётчика, значение накапливается.
 	Counter = "counter"
 )
 
+// MetricsRepository описывает хранилище метрик.
 type MetricsRepository interface {
 	SetGauge(name string, value float64)
 	AddCounter(name string, value int64)
@@ -26,6 +30,7 @@ type MetricsRepository interface {
 	Ping(ctx context.Context) error
 }
 
+// MetricsService реализует операции чтения и записи метрик.
 type MetricsService struct {
 	MetricsRepository MetricsRepository
 }

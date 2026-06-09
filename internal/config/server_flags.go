@@ -2,6 +2,7 @@ package config
 
 import "flag"
 
+// ServerFlags содержит итоговые параметры запуска сервера.
 type ServerFlags struct {
 	RunAddr              string
 	StoreInt             int64
@@ -17,6 +18,7 @@ type ServerFlags struct {
 	AuditURL             string
 }
 
+// LoadServerFlags загружает параметры сервера из флагов и переменных окружения.
 func LoadServerFlags() (*ServerFlags, error) {
 	conf, err := LoadConfig()
 	if err != nil {

@@ -1,9 +1,11 @@
+// Package config загружает параметры сервера и агента из переменных окружения и флагов.
 package config
 
 import (
 	"github.com/caarlos0/env/v11"
 )
 
+// Config объединяет настройки всех компонентов приложения.
 type Config struct {
 	Server     ServerConfig
 	Agent      AgentConfig
@@ -12,6 +14,7 @@ type Config struct {
 	Audit      AuditConfig
 }
 
+// AgentConfig содержит параметры агента сбора метрик.
 type AgentConfig struct {
 	Address        string `env:"ADDRESS"`
 	ReportInterval int64  `env:"REPORT_INTERVAL"`
@@ -20,17 +23,20 @@ type AgentConfig struct {
 	Key            string `env:"KEY"`
 }
 
+// ServerConfig содержит параметры HTTP-сервера.
 type ServerConfig struct {
 	Address *string `env:"ADDRESS"`
 	Key     string  `env:"KEY"`
 }
 
+// LogMetricsConfig содержит параметры файлового хранилища метрик.
 type LogMetricsConfig struct {
 	StoreInterval *int64  `env:"STORE_INTERVAL"`
 	FilePath      *string `env:"FILE_STORAGE_PATH"`
 	Restore       *bool   `env:"RESTORE"`
 }
 
+// DbConfig содержит параметры подключения к PostgreSQL.
 type DbConfig struct {
 	DATABASE_DSN       *string `env:"DATABASE_DSN"`
 	MaxOpenConns       int     `env:"DATABASE_MAX_OPEN_CONNS" envDefault:"10"`
@@ -39,11 +45,13 @@ type DbConfig struct {
 	ConnMaxIdleTimeSec int64   `env:"DATABASE_CONN_MAX_IDLE_TIME_SEC" envDefault:"60"`
 }
 
+// AuditConfig содержит параметры аудита изменений метрик.
 type AuditConfig struct {
 	FilePath *string `env:"AUDIT_FILE"`
 	URL      *string `env:"AUDIT_URL"`
 }
 
+// LoadConfig читает конфигурацию из переменных окружения.
 func LoadConfig() (*Config, error) {
 	cfg := Config{}
 

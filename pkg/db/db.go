@@ -1,3 +1,4 @@
+// Package db предоставляет утилиты для подключения к PostgreSQL и миграций.
 package db
 
 import (
@@ -8,6 +9,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// Options задаёт параметры пула соединений с базой данных.
 type Options struct {
 	MaxOpenConns    int
 	MaxIdleConns    int

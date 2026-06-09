@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// FileObserver записывает события аудита в файл.
 type FileObserver struct {
 	path string
 	mu   sync.Mutex

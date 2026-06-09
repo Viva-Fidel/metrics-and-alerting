@@ -5,6 +5,7 @@ import (
 	"runtime"
 )
 
+// PollMetrics собирает стандартные метрики runtime.
 func PollMetrics(metrics *Metrics) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)

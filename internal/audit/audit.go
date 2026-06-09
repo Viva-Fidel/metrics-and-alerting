@@ -1,3 +1,4 @@
+// Package audit реализует паттерн Observer для логирования изменений метрик.
 package audit
 
 import (
@@ -5,17 +6,20 @@ import (
 	"time"
 )
 
+// Event описывает событие изменения метрик.
 type Event struct {
 	TS        int64    `json:"ts"`
 	Metrics   []string `json:"metrics"`
 	IPAddress string   `json:"ip_address"`
 }
 
+// Observer получает уведомления об изменениях метрик.
 type Observer interface {
 	Update(event Event)
 	ID() string
 }
 
+// Publisher рассылает события аудита зарегистрированным наблюдателям.
 type Publisher struct {
 	mu        sync.RWMutex
 	observers map[string]Observer
