@@ -10,6 +10,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
 	"github.com/gin-gonic/gin"
@@ -20,7 +21,7 @@ func TestHashMiddleware_BadHashRejected(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	repo := repository.NewMemRepository(logger, "", 0, false)
-	router := NewRouter(repo, func(c *gin.Context) { c.Next() }, "secret", nil)
+	router := NewRouter(repo, func(c *gin.Context) { c.Next() }, "secret", audit.NewPublisher(logger, "", ""))
 
 	body := []byte(`{"id":"GaugeMetric","type":"gauge","value":100.5}`)
 	req := httptest.NewRequest(http.MethodPost, "/update/", bytes.NewReader(body))
@@ -36,7 +37,7 @@ func TestHashMiddleware_ResponseHashAdded(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	repo := repository.NewMemRepository(logger, "", 0, false)
-	router := NewRouter(repo, func(c *gin.Context) { c.Next() }, "secret", nil)
+	router := NewRouter(repo, func(c *gin.Context) { c.Next() }, "secret", audit.NewPublisher(logger, "", ""))
 
 	updateBody := []byte(`{"id":"GaugeMetric","type":"gauge","value":100.5}`)
 	updateHash := sha256.Sum256(append(updateBody, []byte("secret")...))

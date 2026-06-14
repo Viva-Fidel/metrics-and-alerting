@@ -1,4 +1,4 @@
-// Package handler предоставляет HTTP-обработчики сервера сбора метрик.
+// Package handler предоставляет HTTP-обработчики сервера сбора метрик
 package handler
 
 import (
@@ -16,19 +16,20 @@ type metricsPageData struct {
 	Counters map[string]int64
 }
 
-// MetricsHandlerDeps содержит зависимости для инициализации MetricsHandler.
+// MetricsHandlerDeps содержит зависимости для инициализации MetricsHandler
 type MetricsHandlerDeps struct {
 	*service.MetricsService
+	// AuditPublisher рассылает события аудита при изменении метрик
 	AuditPublisher *audit.Publisher
 }
 
-// MetricsHandler обрабатывает HTTP-запросы к API метрик.
+// MetricsHandler обрабатывает HTTP-запросы к API метрик
 type MetricsHandler struct {
 	*service.MetricsService
 	auditPublisher *audit.Publisher
 }
 
-// NewMetricsHandler регистрирует маршруты API метрик на переданном роутере.
+// NewMetricsHandler регистрирует маршруты API метрик на переданном роутере
 func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 	handler := &MetricsHandler{
 		MetricsService: deps.MetricsService,
@@ -45,7 +46,7 @@ func NewMetricsHandler(r *gin.Engine, deps MetricsHandlerDeps) {
 
 }
 
-// GetPing возвращает обработчик проверки доступности хранилища метрик (GET /ping).
+// GetPing возвращает обработчик проверки доступности хранилища метрик (GET /ping)
 func (h *MetricsHandler) GetPing() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if err := h.MetricsService.Ping(c.Request.Context()); err != nil {
@@ -56,7 +57,7 @@ func (h *MetricsHandler) GetPing() gin.HandlerFunc {
 	}
 }
 
-// CreateMetricFromURL возвращает обработчик создания метрики из параметров URL (POST /update/:metrics_type/:metrics_name/:metrics_value).
+// CreateMetricFromURL возвращает обработчик создания метрики из параметров URL (POST /update/:metrics_type/:metrics_name/:metrics_value)
 func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		metricType := c.Param("metrics_type")
@@ -73,7 +74,7 @@ func (h *MetricsHandler) CreateMetricFromURL() gin.HandlerFunc {
 	}
 }
 
-// CreateMetricFromJSON возвращает обработчик создания метрики из JSON-тела (POST /update/).
+// CreateMetricFromJSON возвращает обработчик создания метрики из JSON-тела (POST /update/)
 func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body payload.MetricsJSON
@@ -92,7 +93,7 @@ func (h *MetricsHandler) CreateMetricFromJSON() gin.HandlerFunc {
 	}
 }
 
-// CreateMetricsFromJSONBatch возвращает обработчик пакетного обновления метрик (POST /updates/).
+// CreateMetricsFromJSONBatch возвращает обработчик пакетного обновления метрик (POST /updates/)
 func (h *MetricsHandler) CreateMetricsFromJSONBatch() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body []payload.MetricsJSON
@@ -115,7 +116,7 @@ func (h *MetricsHandler) CreateMetricsFromJSONBatch() gin.HandlerFunc {
 	}
 }
 
-// GetMetricFromJSON возвращает обработчик получения метрики по JSON-запросу (POST /value/).
+// GetMetricFromJSON возвращает обработчик получения метрики по JSON-запросу (POST /value/)
 func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var body payload.MetricsJSON
@@ -135,7 +136,7 @@ func (h *MetricsHandler) GetMetricFromJSON() gin.HandlerFunc {
 	}
 }
 
-// GetMetricFromURL возвращает обработчик получения метрики из параметров URL (GET /value/:metrics_type/:metrics_name).
+// GetMetricFromURL возвращает обработчик получения метрики из параметров URL (GET /value/:metrics_type/:metrics_name)
 func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		metricsType := c.Param("metrics_type")
@@ -160,13 +161,10 @@ func (h *MetricsHandler) GetMetricFromURL() gin.HandlerFunc {
 
 // notifyAudit отправляет событие всем наблюдателям
 func (h *MetricsHandler) notifyAudit(c *gin.Context, metrics []string) {
-	if h.auditPublisher == nil {
-		return
-	}
 	h.auditPublisher.Notify(metrics, c.ClientIP())
 }
 
-// GetAllMetrics возвращает обработчик HTML-страницы со всеми метриками (GET /).
+// GetAllMetrics возвращает обработчик HTML-страницы со всеми метриками (GET /)
 func (h *MetricsHandler) GetAllMetrics() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		gauges, counters := h.MetricsService.MetricsRepository.GetAll()

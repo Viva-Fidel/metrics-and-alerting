@@ -1,16 +1,18 @@
-// Package agent реализует агент сбора и отправки метрик на сервер.
+// Package agent реализует агент сбора и отправки метрик на сервер
 package agent
 
 import "sync"
 
-// Metrics хранит собранные gauge- и counter-метрики агента.
+// Metrics хранит собранные gauge- и counter-метрики агента
 type Metrics struct {
-	mu      sync.RWMutex
-	Gauge   map[string]float64
+	mu sync.RWMutex
+	// Gauge содержит gauge-метрики агента
+	Gauge map[string]float64
+	// Counter содержит counter-метрики агента
 	Counter map[string]int64
 }
 
-// NewMetrics создаёт пустое хранилище метрик агента.
+// NewMetrics создаёт пустое хранилище метрик агента
 func NewMetrics() *Metrics {
 	return &Metrics{
 		Gauge:   make(map[string]float64),

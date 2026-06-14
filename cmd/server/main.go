@@ -50,7 +50,8 @@ func main() {
 		}
 	}
 
-	auditPublisher := audit.NewPublisher(flags.AuditFile, flags.AuditURL)
+	auditPublisher := audit.NewPublisher(logger, flags.AuditFile, flags.AuditURL)
+	defer auditPublisher.Close()
 
 	// Собираем HTTP-роутер
 	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, auditPublisher)

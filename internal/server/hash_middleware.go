@@ -21,7 +21,7 @@ func (w *hashResponseWriter) Write(data []byte) (int, error) {
 	return w.ResponseWriter.Write(data)
 }
 
-// HashMiddleware проверяет заголовок HashSHA256 входящих запросов и добавляет хеш в ответ.
+// HashMiddleware проверяет заголовок HashSHA256 входящих запросов и добавляет хеш в ответ
 func HashMiddleware(key string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if key == "" {

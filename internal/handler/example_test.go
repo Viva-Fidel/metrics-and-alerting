@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
@@ -23,6 +24,7 @@ func newExampleRouter() *gin.Engine {
 	router := gin.New()
 	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
 		MetricsService: svc,
+		AuditPublisher: audit.NewPublisher(logger, "", ""),
 	})
 	return router
 }

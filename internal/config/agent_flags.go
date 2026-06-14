@@ -2,7 +2,7 @@ package config
 
 import "flag"
 
-// AgentFlags содержит итоговые параметры запуска агента.
+// AgentFlags содержит итоговые параметры запуска агента
 type AgentFlags struct {
 	RunAddr        string
 	ReportInterval int64

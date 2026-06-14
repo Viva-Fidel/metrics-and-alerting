@@ -1,4 +1,4 @@
-// Package db предоставляет утилиты для подключения к PostgreSQL и миграций.
+// Package db предоставляет утилиты для подключения к PostgreSQL и миграций
 package db
 
 import (
@@ -9,15 +9,19 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// Options задаёт параметры пула соединений с базой данных.
+// Options задаёт параметры пула соединений с базой данных
 type Options struct {
-	MaxOpenConns    int
-	MaxIdleConns    int
+	// MaxOpenConns — максимальное число открытых соединений
+	MaxOpenConns int
+	// MaxIdleConns — максимальное число простаивающих соединений
+	MaxIdleConns int
+	// ConnMaxLifetime — максимальное время жизни соединения
 	ConnMaxLifetime time.Duration
+	// ConnMaxIdleTime — максимальное время простоя соединения
 	ConnMaxIdleTime time.Duration
 }
 
-// NewDB инициализирует подключение к базе данных с повторными попытками пинга.
+// NewDB инициализирует подключение к базе данных с повторными попытками пинга
 func NewDB(dsn string, opts Options) (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("empty DATABASE_DSN")
@@ -40,7 +44,7 @@ func NewDB(dsn string, opts Options) (*sql.DB, error) {
 	return db, nil
 }
 
-// pingWithRetry делает попытки подключения к БД несколько раз с задержкой.
+// pingWithRetry делает попытки подключения к БД несколько раз с задержкой
 func pingWithRetry(db *sql.DB, attempts int, delay time.Duration) error {
 	var lastErr error
 	for i := 0; i < attempts; i++ {

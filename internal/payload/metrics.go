@@ -1,18 +1,26 @@
-// Package payload содержит структуры данных для API метрик.
+// Package payload содержит структуры данных для API метрик
 package payload
 
-// MetricsURL представляет метрику, полученную из URL-параметров.
+// MetricsURL представляет метрику, полученную из URL-параметров
 type MetricsURL struct {
-	Type  string
-	Name  string
+	// Type — тип метрики (gauge или counter)
+	Type string
+	// Name — имя метрики
+	Name string
+	// Gauge — значение gauge-метрики
 	Gauge *float64
+	// Count — значение counter-метрики
 	Count *int64
 }
 
-// MetricsJSON представляет метрику в JSON-формате API.
+// MetricsJSON представляет метрику в JSON-формате API
 type MetricsJSON struct {
-	ID    string   `json:"id"`              // имя метрики
-	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
-	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
-	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
+	// ID — имя метрики
+	ID string `json:"id"`
+	// MType — тип метрики (gauge или counter)
+	MType string `json:"type"`
+	// Delta — значение counter-метрики
+	Delta *int64 `json:"delta,omitempty"`
+	// Value — значение gauge-метрики
+	Value *float64 `json:"value,omitempty"`
 }
