@@ -5,17 +5,28 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 // URLObserver отправляет события аудита на внешний HTTP-эндпоинт
 type URLObserver struct {
 	url    string
 	logger *slog.Logger
+	client *http.Client
 }
+
+const (
+	urlObserverTimeout    = 5 * time.Second
+	urlObserverMaxRetries = 3
+)
 
 // NewURLObserver создаёт новый URLObserver
 func NewURLObserver(logger *slog.Logger, url string) *URLObserver {
-	return &URLObserver{url: url, logger: logger}
+	return &URLObserver{
+		url:    url,
+		logger: logger,
+		client: &http.Client{Timeout: urlObserverTimeout},
+	}
 }
 
 // ID возвращает идентификатор наблюдателя
@@ -31,10 +42,36 @@ func (u *URLObserver) Update(event Event) {
 		return
 	}
 
-	resp, err := http.Post(u.url, "application/json", bytes.NewReader(data))
-	if err != nil {
-		u.logger.Error("failed to send audit event", slog.String("url", u.url), slog.Any("error", err))
-		return
+	var resp *http.Response
+	for attempt := 1; attempt <= urlObserverMaxRetries; attempt++ {
+		req, reqErr := http.NewRequest(http.MethodPost, u.url, bytes.NewReader(data))
+		if reqErr != nil {
+			u.logger.Error("failed to build audit request", slog.String("url", u.url), slog.Any("error", reqErr))
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err = u.client.Do(req)
+		if err == nil && resp.StatusCode < http.StatusInternalServerError {
+			break
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+
+		if attempt == urlObserverMaxRetries {
+			if err != nil {
+				u.logger.Error("failed to send audit event", slog.String("url", u.url), slog.Any("error", err))
+			} else {
+				u.logger.Error(
+					"audit endpoint returned retryable status",
+					slog.String("url", u.url),
+					slog.Int("status", resp.StatusCode),
+					slog.Int("attempts", urlObserverMaxRetries),
+				)
+			}
+			return
+		}
 	}
 	defer resp.Body.Close()
 

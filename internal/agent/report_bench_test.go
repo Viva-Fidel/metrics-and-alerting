@@ -10,7 +10,9 @@ import (
 	models "github.com/Viva-Fidel/metrics-and-alerting/internal/model"
 )
 
-func benchMetricsBatch(size int) []models.Metrics {
+func benchMetricsBatch(b *testing.B, size int) []models.Metrics {
+	b.Helper()
+
 	batch := make([]models.Metrics, size)
 	for i := range size {
 		if i%2 == 0 {
@@ -34,64 +36,22 @@ func benchMetricsBatch(size int) []models.Metrics {
 	return batch
 }
 
-func BenchmarkReportMetrics_BuildBatch(b *testing.B) {
-	sizes := []int{30, 100}
-
-	for _, size := range sizes {
-		b.Run(fmt.Sprintf("metrics=%d", size), func(b *testing.B) {
-			metrics := &Metrics{
-				Gauge:   make(map[string]float64, size/2),
-				Counter: make(map[string]int64, size/2),
-			}
-			for i := range size / 2 {
-				metrics.Gauge[fmt.Sprintf("gauge_%d", i)] = float64(i) * 1.23
-				metrics.Counter[fmt.Sprintf("counter_%d", i)] = int64(i)
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-
-			for i := 0; i < b.N; i++ {
-				gauge, counter := metrics.Snapshot()
-				batch := make([]models.Metrics, 0, len(gauge)+len(counter))
-
-				for name, value := range gauge {
-					v := value
-					batch = append(batch, models.Metrics{
-						ID:    name,
-						MType: metricTypeGauge,
-						Value: &v,
-					})
-				}
-
-				for name, value := range counter {
-					v := value
-					batch = append(batch, models.Metrics{
-						ID:    name,
-						MType: metricTypeCounter,
-						Delta: &v,
-					})
-				}
-				_ = batch
-			}
-		})
-	}
-}
-
 func BenchmarkSendBatchMetrics_Encode(b *testing.B) {
 	sizes := []int{30, 100}
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("batch=%d", size), func(b *testing.B) {
-			batch := benchMetricsBatch(size)
+			batch := benchMetricsBatch(b, size)
 			var compressed bytes.Buffer
 
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
+				b.StopTimer()
 				compressed.Reset()
 				zipWriter := gzip.NewWriter(&compressed)
+				b.StartTimer()
 				if err := json.NewEncoder(zipWriter).Encode(batch); err != nil {
 					b.Fatal(err)
 				}
