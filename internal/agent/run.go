@@ -30,7 +30,6 @@ func Run(
 	reportJobs := make(chan struct{}, rateLimit)
 	var workersWG sync.WaitGroup
 
-	
 	for i := 0; i < rateLimit; i++ {
 		workerID := i + 1
 		workersWG.Add(1)

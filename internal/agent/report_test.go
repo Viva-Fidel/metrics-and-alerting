@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
-	"github.com/Viva-Fidel/metrics-and-alerting/internal/model"
+	models "github.com/Viva-Fidel/metrics-and-alerting/internal/model"
 	"github.com/stretchr/testify/assert"
 	"resty.dev/v3"
 )

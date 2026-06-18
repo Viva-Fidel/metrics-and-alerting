@@ -60,4 +60,3 @@ func TestHashMiddleware_ResponseHashAdded(t *testing.T) {
 	assert.Equal(t, http.StatusOK, readW.Code)
 	assert.NotEmpty(t, readW.Header().Get(security.HashHeader))
 }
-
