@@ -1,3 +1,4 @@
+// Package logging предоставляет middleware для структурированного логирования HTTP-запросов
 package logging
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SlogMiddleware логирует метод, URI, статус и время обработки каждого запроса
 func SlogMiddleware(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()

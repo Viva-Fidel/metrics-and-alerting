@@ -7,7 +7,7 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-// Ссобирает системные метрики
+// PollSystemMetrics собирает системные метрики (CPU, память и др.)
 func PollSystemMetrics(metrics *Metrics) error {
 	vm, err := mem.VirtualMemory()
 	if err != nil {

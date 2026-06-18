@@ -1,3 +1,4 @@
+// Package service содержит бизнес-логику работы с метриками
 package service
 
 import (
@@ -9,38 +10,50 @@ import (
 )
 
 const (
-	Gauge   = "gauge"
+	// Gauge — тип метрики с плавающей точкой, значение перезаписывается
+	Gauge = "gauge"
+	// Counter — тип метрики-счётчика, значение накапливается
 	Counter = "counter"
 )
 
+// MetricsRepository описывает хранилище метрик
 type MetricsRepository interface {
+	// SetGauge устанавливает значение gauge-метрики
 	SetGauge(name string, value float64)
+	// AddCounter увеличивает counter-метрику на заданное значение
 	AddCounter(name string, value int64)
+	// ApplyBatch выполняет пакетное обновление метрик
 	ApplyBatch(metrics []payload.MetricsJSON) error
 
+	// GetGauge возвращает значение gauge-метрики по имени
 	GetGauge(name string) (float64, bool)
+	// GetCounter возвращает значение counter-метрики по имени
 	GetCounter(name string) (int64, bool)
 
+	// GetAll возвращает копии всех gauge- и counter-метрик
 	GetAll() (map[string]float64, map[string]int64)
 
+	// Ping проверяет доступность хранилища
 	Ping(ctx context.Context) error
 }
 
+// MetricsService реализует операции чтения и записи метрик
 type MetricsService struct {
+	// MetricsRepository — хранилище метрик
 	MetricsRepository MetricsRepository
 }
 
-// NewMetricsService создаёт новый сервис метрик на основе переданного репозитория.
+// NewMetricsService создаёт новый сервис метрик на основе переданного репозитория
 func NewMetricsService(metricsRepository MetricsRepository) *MetricsService {
 	return &MetricsService{MetricsRepository: metricsRepository}
 }
 
-// Ping проверяет доступность хранилища (для Postgres — соединение с БД).
+// Ping проверяет доступность хранилища (для Postgres — соединение с БД)
 func (s *MetricsService) Ping(ctx context.Context) error {
 	return s.MetricsRepository.Ping(ctx)
 }
 
-// SetMetricJSON устанавливает значение метрики на основе структуры payload.MetricsJSON.
+// SetMetricJSON устанавливает значение метрики на основе структуры payload.MetricsJSON
 func (s *MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
 	switch m.MType {
 	case Gauge:
@@ -59,7 +72,7 @@ func (s *MetricsService) SetMetricJSON(m *payload.MetricsJSON) error {
 	return nil
 }
 
-// SetMetricsJSONBatch выполняет пакетное обновление метрик из слайса payload.MetricsJSON.
+// SetMetricsJSONBatch выполняет пакетное обновление метрик из слайса payload.MetricsJSON
 func (s *MetricsService) SetMetricsJSONBatch(metrics []payload.MetricsJSON) error {
 	if len(metrics) == 0 {
 		return nil
@@ -81,7 +94,7 @@ func (s *MetricsService) SetMetricsJSONBatch(metrics []payload.MetricsJSON) erro
 	return s.MetricsRepository.ApplyBatch(metrics)
 }
 
-// SetMetricURL устанавливает значение метрики, переданное в виде строковых параметров (например, из URL).
+// SetMetricURL устанавливает значение метрики, переданное в виде строковых параметров (например, из URL)
 func (s *MetricsService) SetMetricURL(metricType, name, value string) error {
 	switch metricType {
 	case Gauge:
@@ -102,7 +115,7 @@ func (s *MetricsService) SetMetricURL(metricType, name, value string) error {
 	return nil
 }
 
-// GetMetricURL возвращает метрику (структуру payload.MetricsURL) по типу и имени (например, для ответа на запрос по URL).
+// GetMetricURL возвращает метрику (структуру payload.MetricsURL) по типу и имени (например, для ответа на запрос по URL)
 func (s *MetricsService) GetMetricURL(metricType, name string) (*payload.MetricsURL, error) {
 	switch metricType {
 	case Gauge:
@@ -130,7 +143,7 @@ func (s *MetricsService) GetMetricURL(metricType, name string) (*payload.Metrics
 	}
 }
 
-// GetMetricJSON возвращает метрику (структуру payload.MetricsJSON) по типу и имени (для API с JSON).
+// GetMetricJSON возвращает метрику (структуру payload.MetricsJSON) по типу и имени (для API с JSON)
 func (s *MetricsService) GetMetricJSON(metricType, name string) (*payload.MetricsJSON, error) {
 	switch metricType {
 	case Gauge:

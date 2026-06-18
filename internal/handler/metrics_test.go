@@ -9,12 +9,20 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/handler"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
+func newMetricsHandlerDeps(logger *slog.Logger, svc *service.MetricsService) handler.MetricsHandlerDeps {
+	return handler.MetricsHandlerDeps{
+		MetricsService: svc,
+		AuditPublisher: audit.NewPublisher(logger, "", ""),
+	}
+}
 
 func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 	type want struct {
@@ -52,9 +60,7 @@ func TestMetricsHandler_CreateMetricFromURL(t *testing.T) {
 			svc := service.NewMetricsService(repo)
 
 			router := gin.New()
-			handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-				MetricsService: svc,
-			})
+			handler.NewMetricsHandler(router, newMetricsHandlerDeps(logger, svc))
 
 			req := httptest.NewRequest(http.MethodPost, tt.url, nil)
 			w := httptest.NewRecorder()
@@ -77,9 +83,7 @@ func TestMetricsHandler_GetMetricFromURL(t *testing.T) {
 	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
-	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		MetricsService: svc,
-	})
+	handler.NewMetricsHandler(router, newMetricsHandlerDeps(logger, svc))
 
 	tests := []struct {
 		name         string
@@ -139,9 +143,7 @@ func TestMetricsHandler_GetAllMetrics(t *testing.T) {
 	repo.AddCounter("TestCounter", 50)
 
 	router := gin.New()
-	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		MetricsService: svc,
-	})
+	handler.NewMetricsHandler(router, newMetricsHandlerDeps(logger, svc))
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
@@ -165,9 +167,7 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
-	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		MetricsService: svc,
-	})
+	handler.NewMetricsHandler(router, newMetricsHandlerDeps(logger, svc))
 
 	tests := []struct {
 		name         string
@@ -236,9 +236,7 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 	repo.AddCounter("TestCounter", 10)
 
 	router := gin.New()
-	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		MetricsService: svc,
-	})
+	handler.NewMetricsHandler(router, newMetricsHandlerDeps(logger, svc))
 
 	tests := []struct {
 		name         string
@@ -312,9 +310,7 @@ func TestMetricsHandler_CreateMetricsFromJSONBatch(t *testing.T) {
 	svc := service.NewMetricsService(repo)
 
 	router := gin.New()
-	handler.NewMetricsHandler(router, handler.MetricsHandlerDeps{
-		MetricsService: svc,
-	})
+	handler.NewMetricsHandler(router, newMetricsHandlerDeps(logger, svc))
 
 	tests := []struct {
 		name         string

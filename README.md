@@ -43,7 +43,46 @@ git fetch template && git checkout template/v2 .github
 - **Hexagonal Architecture**
 - **Layered Architecture**
 
+## Бенчмарки
+
+Бенчмарки покрывают ключевые компоненты системы:
+
+| Пакет | Бенчмарки |
+|-------|-----------|
+| `internal/repository` | `WriteMetricsJSON`, `SaveToFile`, `LoadFromFile`, `SetGauge`, `ApplyBatch`, `GetAll` |
+| `internal/agent` | `ReportMetrics_BuildBatch`, `SendBatchMetrics_Encode` |
+| `internal/audit` | `Publisher_Notify`, `FileObserver_Update` |
+| `internal/handler` | `CreateMetricsFromJSONBatch` |
+
+Запуск:
+
+```bash
+go test -bench=. -benchmem ./internal/repository/... ./internal/agent/... ./internal/audit/... ./internal/handler/...
+```
+
 ## Профилирование памяти (pprof)
+### Анализ и оптимизация
+
+**Проблема.** Профиль `base.pprof` показал, что основной потребитель памяти при нагрузке - `MemRepository.SaveToFile`. Метод вызывается при каждом обновлении метрик (если автосохранение отключено) и из `ApplyBatch` после пакетного POST `/updates/`. Старый подход собирал все gauge/counter в один слайс `[]storedMetric`, после чего вызывал `json.Marshal`. Это создавало промежуточный буфер размером с весь файл, а также аллокировал указатели для каждого значения (`*float64`, `*int64`).
+
+**Что изменил.** Вместо `json.Marshal` всего слайса добавлена потоковая функция `writeMetricsJSON`, которая пишет JSON напрямую во временный файл через `json.Encoder`:
+
+- массив собирается по одному элементу - без промежуточного слайса всех метрик
+- для gauge и counter используются отдельные структуры `storedGaugeMetric` / `storedCounterMetric` с полями по значению, без лишних указателей
+- сериализация идёт сразу в `io.Writer` (временный файл), а не в `[]byte` в памяти
+
+**Результат.** Сравнение профилей (`-diff_base`) показывает отрицательные значения - память уменьшилась:
+
+| Метрика | До | После | Изменение |
+|---------|-----|-------|-----------|
+| `alloc_space` (суммарно) | ~30.5 MB | ~19.0 MB | **−37.7%** |
+| `SaveToFile` (cum, alloc_space) | ~20.7 MB | ~9 MB | **−~56%** |
+| `SaveToFile` (flat, inuse_space) | - | -525 kB | меньше удерживаемой памяти |
+
+Из топа diff исчезли `encoding/json.Marshal`, `bytes.growSlice` и `encoding/json.newEncodeState` как основные источники аллокаций в цепочке сохранения. Снизилось потребление и у HTTP-обработчика `CreateMetricsFromJSONBatch`, потому что он вызывает `ApplyBatch` -> `SaveToFile`.
+
+Бенчмарки `BenchmarkWriteMetricsJSON` и `BenchmarkMemRepository_SaveToFile` позволяют отслеживать регрессии по времени и числу аллокаций (`-benchmem`).
+
 ### Сравнение профилей
 
 ```bash

@@ -50,7 +50,7 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, 
 	sendMetricsLegacy(ctx, client, gauge, counter, hashKey)
 }
 
-// sendMetricsLegacy отправляет метрики по одному, используя старый формат REST-запросов.
+// sendMetricsLegacy отправляет метрики по одному, используя старый формат REST-запросов
 func sendMetricsLegacy(
 	ctx context.Context,
 	client *resty.Client,
@@ -95,7 +95,7 @@ func sendMetricsLegacy(
 	}
 }
 
-// sendBatchMetrics отправляет пакет метрик в формате JSON c использованием gzip-сжатия.
+// sendBatchMetrics отправляет пакет метрик в формате JSON c использованием gzip-сжатия
 func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.Metrics, hashKey string) bool {
 	var compressed bytes.Buffer
 	zipWriter := gzip.NewWriter(&compressed)

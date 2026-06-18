@@ -12,22 +12,24 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// DBRepository хранит метрики в PostgreSQL
 type DBRepository struct {
 	db *sql.DB
 }
 
 var dbRetryDelays = []time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
 
+// NewDBRepository создаёт репозиторий метрик на основе подключения к БД
 func NewDBRepository(db *sql.DB) *DBRepository {
 	return &DBRepository{db: db}
 }
 
-// Ping проверяет соединение с базой данных.
+// Ping проверяет соединение с базой данных
 func (p *DBRepository) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }
 
-// SetGauge записывает или обновляет gauge-метрику в базе данных.
+// SetGauge записывает или обновляет gauge-метрику в базе данных
 func (p *DBRepository) SetGauge(name string, value float64) {
 	_ = withDBRetry(func() error {
 		_, err := p.db.Exec(
@@ -41,7 +43,7 @@ func (p *DBRepository) SetGauge(name string, value float64) {
 	})
 }
 
-// AddCounter увеличивает counter-метрику на заданное значение в базе данных.
+// AddCounter увеличивает counter-метрику на заданное значение в базе данных
 func (p *DBRepository) AddCounter(name string, value int64) {
 	_ = withDBRetry(func() error {
 		_, err := p.db.Exec(
@@ -55,7 +57,7 @@ func (p *DBRepository) AddCounter(name string, value int64) {
 	})
 }
 
-// ApplyBatch выполняет пакетное обновление метрик (gauge и counter) в рамках одной транзакции.
+// ApplyBatch выполняет пакетное обновление метрик (gauge и counter) в рамках одной транзакции
 func (p *DBRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
 	if len(metrics) == 0 {
 		return nil
@@ -102,7 +104,7 @@ func (p *DBRepository) ApplyBatch(metrics []payload.MetricsJSON) error {
 	})
 }
 
-// GetGauge возвращает текущее значение gauge-метрики по имени.
+// GetGauge возвращает текущее значение gauge-метрики по имени
 func (p *DBRepository) GetGauge(name string) (float64, bool) {
 	var result float64
 	if err := p.db.QueryRow(`SELECT value FROM metrics WHERE id = $1 AND type = 'gauge'`, name).Scan(&result); err != nil {
@@ -111,7 +113,7 @@ func (p *DBRepository) GetGauge(name string) (float64, bool) {
 	return result, true
 }
 
-// GetCounter возвращает текущее значение counter-метрики по имени.
+// GetCounter возвращает текущее значение counter-метрики по имени
 func (p *DBRepository) GetCounter(name string) (int64, bool) {
 	var result int64
 	if err := p.db.QueryRow(`SELECT delta FROM metrics WHERE id = $1 AND type = 'counter'`, name).Scan(&result); err != nil {
@@ -120,7 +122,7 @@ func (p *DBRepository) GetCounter(name string) (int64, bool) {
 	return result, true
 }
 
-// GetAll возвращает все метрики, разделяя их на gauge и counter.
+// GetAll возвращает все метрики, разделяя их на gauge и counter
 func (p *DBRepository) GetAll() (map[string]float64, map[string]int64) {
 	gauges := make(map[string]float64)
 	counters := make(map[string]int64)
@@ -152,7 +154,7 @@ func (p *DBRepository) GetAll() (map[string]float64, map[string]int64) {
 	return gauges, counters
 }
 
-// withDBRetry выполняет функцию с повторами при ошибках соединения с базой данных.
+// withDBRetry выполняет функцию с повторами при ошибках соединения с базой данных
 func withDBRetry(fn func() error) error {
 	for attempt := 0; ; attempt++ {
 		err := fn()
@@ -166,7 +168,7 @@ func withDBRetry(fn func() error) error {
 	}
 }
 
-// isRetriablePGError проверяет, является ли ошибка PostgreSQL ошибкой соединения.
+// isRetriablePGError проверяет, является ли ошибка PostgreSQL ошибкой соединения
 func isRetriablePGError(err error) bool {
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) {
