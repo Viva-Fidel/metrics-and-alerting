@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/logging"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
@@ -49,8 +50,10 @@ func main() {
 		}
 	}
 
+	auditPublisher := audit.NewPublisher(flags.AuditFile, flags.AuditURL)
+
 	// Собираем HTTP-роутер
-	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key)
+	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, auditPublisher)
 
 	// Запускаем HTTP-сервер
 	if err := r.Run(flags.RunAddr); err != nil {

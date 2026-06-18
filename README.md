@@ -42,3 +42,27 @@ git fetch template && git checkout template/v2 .github
 - **Clean Architecture**
 - **Hexagonal Architecture**
 - **Layered Architecture**
+
+## Профилирование памяти (pprof)
+### Сравнение профилей
+
+```bash
+go tool pprof -top -diff_base=profiles/base.pprof profiles/result.pprof
+```
+
+```
+File: metrics-server
+Build ID: b79ef11502fabc6b84708b6a19040fdbfd052688
+Type: inuse_space
+Time: 2026-06-09 17:06:20 MSK
+Showing nodes accounting for -2587.09kB, 50.15% of 5159.13kB total
+Dropped 2 nodes (cum <= 25.79kB)
+      flat  flat%   sum%        cum   cum%
+ -525.43kB 10.18% 10.18%  -525.43kB 10.18%  github.com/Viva-Fidel/metrics-and-alerting/internal/repository.(*MemRepository).SaveToFile
+ -525.43kB 10.18% 20.37%  -525.43kB 10.18%  github.com/go-playground/validator/v10.map.init.7
+ -512.09kB  9.93% 30.29%  -512.09kB  9.93%  github.com/gabriel-vasile/mimetype/internal/magic.init
+ -512.09kB  9.93% 40.22%  -512.09kB  9.93%  reflect.growslice
+ -512.05kB  9.93% 50.15%  -512.05kB  9.93%  bufio.NewReaderSize (inline)
+```
+
+По `alloc_space` суммарные аллокации снизились с ~30.5 MB до ~19.0 MB (−37.7%), `SaveToFile` — с ~20.7 MB до ~9 MB cum.

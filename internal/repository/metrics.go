@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -19,6 +20,18 @@ type storedMetric struct {
 	Type  string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+}
+
+type storedGaugeMetric struct {
+	ID    string  `json:"id"`
+	Type  string  `json:"type"`
+	Value float64 `json:"value"`
+}
+
+type storedCounterMetric struct {
+	ID    string `json:"id"`
+	Type  string `json:"type"`
+	Delta int64  `json:"delta"`
 }
 
 type MemRepository struct {
@@ -239,52 +252,46 @@ func (m *MemRepository) loadFromFile() error {
 	return nil
 }
 
+func writeMetricsJSON(w io.Writer, gauges map[string]float64, counters map[string]int64) error {
+	if _, err := w.Write([]byte{'['}); err != nil {
+		return err
+	}
+
+	enc := json.NewEncoder(w)
+	first := true
+	writeItem := func(v any) error {
+		if !first {
+			if _, err := w.Write([]byte{','}); err != nil {
+				return err
+			}
+		}
+		first = false
+		return enc.Encode(v)
+	}
+
+	for name, val := range gauges {
+		if err := writeItem(storedGaugeMetric{ID: name, Type: "gauge", Value: val}); err != nil {
+			return err
+		}
+	}
+	for name, val := range counters {
+		if err := writeItem(storedCounterMetric{ID: name, Type: "counter", Delta: val}); err != nil {
+			return err
+		}
+	}
+
+	_, err := w.Write([]byte{']'})
+	return err
+}
+
 func (m *MemRepository) SaveToFile() error {
 	if m.filePath == "" {
 		return nil // файл не указан — ничего не сохраняем
 	}
 
-	// создаём копии текущих метрик для безопасной записи
-	m.mu.RLock()
-	gaugesCopy := make(map[string]float64, len(m.gauges))
-	for k, v := range m.gauges {
-		gaugesCopy[k] = v
-	}
-	countersCopy := make(map[string]int64, len(m.counters))
-	for k, v := range m.counters {
-		countersCopy[k] = v
-	}
-	m.mu.RUnlock()
-
-	// Сериализуем конкурирующие записи в файл, не удерживая m.mu.
 	m.saveMu.Lock()
-	defer m.saveMu.Unlock() // защита записи в файл
+	defer m.saveMu.Unlock()
 
-	// формируем JSON
-	items := make([]storedMetric, 0, len(gaugesCopy)+len(countersCopy))
-	for name, val := range gaugesCopy {
-		v := val
-		items = append(items, storedMetric{
-			ID:    name,
-			Type:  "gauge",
-			Value: &v,
-		})
-	}
-	for name, val := range countersCopy {
-		v := val
-		items = append(items, storedMetric{
-			ID:    name,
-			Type:  "counter",
-			Delta: &v,
-		})
-	}
-
-	raw, err := json.Marshal(items) // сериализация в JSON
-	if err != nil {
-		return fmt.Errorf("failed to marshal metrics: %w", err)
-	}
-
-	// создаём директорию, если нужно
 	dir := filepath.Dir(m.filePath)
 	base := filepath.Base(m.filePath)
 	if dir != "." && dir != "" {
@@ -293,8 +300,7 @@ func (m *MemRepository) SaveToFile() error {
 			return fmt.Errorf("failed to create storage directory %q: %w", dir, err)
 		}
 	}
-
-	// запись через временный файл для атомарности
+    // создаём временный файл
 	tmp, err := os.CreateTemp(dir, base+".tmp-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file in %q: %w", dir, err)
@@ -305,18 +311,22 @@ func (m *MemRepository) SaveToFile() error {
 			m.logger.Error("failed to remove temp file", slog.String("file", tmpName), slog.Any("error", err))
 		}
 	}()
-
-	if _, err := tmp.Write(raw); err != nil {
+    
+	// блокировка на чтение
+	m.mu.RLock()
+	err = writeMetricsJSON(tmp, m.gauges, m.counters)
+	m.mu.RUnlock()
+	if err != nil {
 		if closeErr := tmp.Close(); closeErr != nil {
 			m.logger.Error("failed to close temp file after write error", slog.String("file", tmpName), slog.Any("error", closeErr))
 		}
-		return fmt.Errorf("failed to write temp file %q: %w", tmpName, err)
+		return fmt.Errorf("failed to marshal metrics: %w", err)
 	}
+
 	if err := tmp.Close(); err != nil {
 		return fmt.Errorf("failed to close temp file %q: %w", tmpName, err)
 	}
 
-	// атомарная замена основного файла
 	if err := os.Rename(tmpName, m.filePath); err != nil {
 		return fmt.Errorf("failed to replace storage file %q: %w", m.filePath, err)
 	}
