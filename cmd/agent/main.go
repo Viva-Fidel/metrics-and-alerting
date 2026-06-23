@@ -13,7 +13,15 @@ import (
 	"resty.dev/v3"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 func main() {
+	printBuildInfo()
+
 	// logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
