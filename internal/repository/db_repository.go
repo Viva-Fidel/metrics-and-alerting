@@ -131,7 +131,9 @@ func (p *DBRepository) GetAll() (map[string]float64, map[string]int64) {
 	if err != nil {
 		return gauges, counters
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	for rows.Next() {
 		var (
@@ -149,6 +151,10 @@ func (p *DBRepository) GetAll() (map[string]float64, map[string]int64) {
 		if mType == "counter" && delta.Valid {
 			counters[id] = delta.Int64
 		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return gauges, counters
 	}
 
 	return gauges, counters

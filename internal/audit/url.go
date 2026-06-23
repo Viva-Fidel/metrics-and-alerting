@@ -10,9 +10,9 @@ import (
 
 // URLObserver отправляет события аудита на внешний HTTP-эндпоинт
 type URLObserver struct {
-	url    string
 	logger *slog.Logger
 	client *http.Client
+	url    string
 }
 
 const (
@@ -56,7 +56,9 @@ func (u *URLObserver) Update(event Event) {
 			break
 		}
 		if resp != nil {
-			resp.Body.Close()
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				u.logger.Error("failed to close audit response body", slog.Any("error", closeErr))
+			}
 		}
 
 		if attempt == urlObserverMaxRetries {
@@ -73,7 +75,11 @@ func (u *URLObserver) Update(event Event) {
 			return
 		}
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			u.logger.Error("failed to close audit response body", slog.Any("error", closeErr))
+		}
+	}()
 
 	if resp.StatusCode >= http.StatusMultipleChoices {
 		u.logger.Error(

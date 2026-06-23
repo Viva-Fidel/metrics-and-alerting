@@ -30,16 +30,14 @@ func Run(
 	reportJobs := make(chan struct{}, rateLimit)
 	var workersWG sync.WaitGroup
 
-	for i := 0; i < rateLimit; i++ {
+	for i := range rateLimit {
 		workerID := i + 1
-		workersWG.Add(1)
-		go func() {
-			defer workersWG.Done()
+		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
 				ReportMetrics(ctx, client, metrics, hashKey)
 			}
-		}()
+		})
 	}
 
 	// WaitGroup для ожидания завершения всех циклов

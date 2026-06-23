@@ -13,9 +13,9 @@ import (
 var migrationUpPattern = regexp.MustCompile(`^(\d+)_.*\.up\.sql$`)
 
 type migration struct {
-	version int
 	name    string
 	path    string
+	version int
 }
 
 // RunMigrations применяет все новые миграции к базе данных

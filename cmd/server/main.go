@@ -29,12 +29,12 @@ func main() {
 	var metricsRepository service.MetricsRepository = repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
 
 	// Если указан DSN - подключаемся к Postgres, при ошибке остаёмся на in-memory
-	if dsn := strings.TrimSpace(flags.Db); dsn != "" {
+	if dsn := strings.TrimSpace(flags.DB); dsn != "" {
 		database, err := db.NewDB(dsn, db.Options{
-			MaxOpenConns:    flags.DbMaxOpenConns,
-			MaxIdleConns:    flags.DbMaxIdleConns,
-			ConnMaxLifetime: time.Duration(flags.DbConnMaxLifetimeSec) * time.Second,
-			ConnMaxIdleTime: time.Duration(flags.DbConnMaxIdleTimeSec) * time.Second,
+			MaxOpenConns:    flags.DBMaxOpenConns,
+			MaxIdleConns:    flags.DBMaxIdleConns,
+			ConnMaxLifetime: time.Duration(flags.DBConnMaxLifetimeSec) * time.Second,
+			ConnMaxIdleTime: time.Duration(flags.DBConnMaxIdleTimeSec) * time.Second,
 		})
 		if err != nil {
 			logger.Error("failed to run init db", slog.Any("error", err))
@@ -51,7 +51,11 @@ func main() {
 	}
 
 	auditPublisher := audit.NewPublisher(logger, flags.AuditFile, flags.AuditURL)
-	defer auditPublisher.Close()
+	defer func() {
+		if err := auditPublisher.Close(); err != nil {
+			logger.Error("failed to close audit publisher", slog.Any("error", err))
+		}
+	}()
 
 	// Собираем HTTP-роутер
 	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, auditPublisher)
@@ -59,6 +63,5 @@ func main() {
 	// Запускаем HTTP-сервер
 	if err := r.Run(flags.RunAddr); err != nil {
 		logger.Error("failed to run server", slog.Any("error", err))
-		os.Exit(1)
 	}
 }

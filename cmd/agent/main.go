@@ -35,7 +35,11 @@ func main() {
 		AddRetryConditions(func(_ *resty.Response, err error) bool {
 			return err != nil
 		})
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			logger.Error("failed to close http client", slog.Any("error", err))
+		}
+	}()
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

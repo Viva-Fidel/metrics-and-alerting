@@ -23,7 +23,9 @@ func BenchmarkPublisher_Notify(b *testing.B) {
 				filepath.Join(dir, "audit.json"),
 				"",
 			)
-			defer publisher.Close()
+			defer func() {
+				_ = publisher.Close()
+			}()
 
 			metrics := make([]string, size)
 			for i := range size {
@@ -43,7 +45,7 @@ func BenchmarkPublisher_Notify(b *testing.B) {
 func BenchmarkFileObserver_Update(b *testing.B) {
 	dir := b.TempDir()
 	observer := NewFileObserver(benchLogger(), filepath.Join(dir, "audit.json"))
-	defer observer.Close()
+	defer func() { _ = observer.Close() }()
 
 	event := Event{
 		TS:        1_700_000_000,

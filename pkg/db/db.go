@@ -47,7 +47,7 @@ func NewDB(dsn string, opts Options) (*sql.DB, error) {
 // pingWithRetry делает попытки подключения к БД несколько раз с задержкой
 func pingWithRetry(db *sql.DB, attempts int, delay time.Duration) error {
 	var lastErr error
-	for i := 0; i < attempts; i++ {
+	for range attempts {
 		if err := db.Ping(); err == nil {
 			return nil
 		} else {

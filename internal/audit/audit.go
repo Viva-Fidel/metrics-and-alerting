@@ -9,12 +9,9 @@ import (
 
 // Event описывает событие изменения метрик
 type Event struct {
-	// TS — Unix-время события в секундах
-	TS int64 `json:"ts"`
-	// Metrics — имена изменённых метрик
-	Metrics []string `json:"metrics"`
-	// IPAddress — IP-адрес клиента, инициировавшего изменение
-	IPAddress string `json:"ip_address"`
+	IPAddress string   `json:"ip_address"`
+	Metrics   []string `json:"metrics"`
+	TS        int64    `json:"ts"`
 }
 
 // Observer получает уведомления об изменениях метрик
@@ -68,8 +65,8 @@ func closeObserver(o Observer) {
 
 // Publisher рассылает события аудита зарегистрированным наблюдателям
 type Publisher struct {
-	mu        sync.RWMutex
 	observers map[string]*observerRunner
+	mu        sync.RWMutex
 }
 
 // NewPublisher создаёт новый Publisher и регистрирует наблюдателей для файла и URL

@@ -37,7 +37,7 @@ func TestReportMetrics_SendsBatch(t *testing.T) {
 
 		reader, err := gzip.NewReader(bytes.NewReader(compressedBody))
 		assert.NoError(t, err)
-		defer reader.Close()
+		defer func() { _ = reader.Close() }()
 
 		raw, err := io.ReadAll(reader)
 		assert.NoError(t, err)
@@ -53,7 +53,7 @@ func TestReportMetrics_SendsBatch(t *testing.T) {
 	}
 
 	client := resty.New().SetBaseURL(ts.URL)
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	agent.ReportMetrics(context.Background(), client, metrics, "secret")
 
@@ -72,7 +72,7 @@ func TestReportMetrics_SkipsEmptyBatch(t *testing.T) {
 	defer ts.Close()
 
 	client := resty.New().SetBaseURL(ts.URL)
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	agent.ReportMetrics(context.Background(), client, agent.NewMetrics(), "")
 	assert.Equal(t, 0, requestsCount)
@@ -98,7 +98,7 @@ func TestReportMetrics_FallbackToLegacy(t *testing.T) {
 	}
 
 	client := resty.New().SetBaseURL(ts.URL)
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	agent.ReportMetrics(context.Background(), client, metrics, "")
 
