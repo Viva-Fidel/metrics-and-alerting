@@ -9,10 +9,10 @@ import (
 
 // FileObserver записывает события аудита в файл
 type FileObserver struct {
-	path   string
 	file   *os.File
-	mu     sync.Mutex
 	logger *slog.Logger
+	path   string
+	mu     sync.Mutex
 }
 
 // NewFileObserver создает новый FileObserver и открывает файл для записи

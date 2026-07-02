@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"sync"
@@ -17,10 +18,10 @@ import (
 )
 
 type storedMetric struct {
-	ID    string   `json:"id"`
-	Type  string   `json:"type"`
 	Delta *int64   `json:"delta,omitempty"`
 	Value *float64 `json:"value,omitempty"`
+	ID    string   `json:"id"`
+	Type  string   `json:"type"`
 }
 
 type storedGaugeMetric struct {
@@ -37,18 +38,15 @@ type storedCounterMetric struct {
 
 // MemRepository хранит метрики в памяти с опциональным сохранением в файл
 type MemRepository struct {
-	mu       sync.RWMutex       // мьютекс для защиты доступа
-	gauges   map[string]float64 // метрики типа gauge
-	counters map[string]int64   // метрики типа counter
-
-	filePath      string        // файл для сохранения метрик
-	storeInterval time.Duration // интервал автосохранения
-
-	saveMu sync.Mutex    // защита записи в файл
-	ticker *time.Ticker  // тикер для автосохранения
-	stopCh chan struct{} // сигнал остановки тикера
-
-	logger *slog.Logger // логирование
+	gauges        map[string]float64
+	counters      map[string]int64
+	ticker        *time.Ticker
+	stopCh        chan struct{}
+	logger        *slog.Logger
+	filePath      string
+	storeInterval time.Duration
+	mu            sync.RWMutex
+	saveMu        sync.Mutex
 }
 
 // NewMemRepository создаёт in-memory хранилище метрик
@@ -158,15 +156,8 @@ func (m *MemRepository) GetAll() (map[string]float64, map[string]int64) {
 	defer m.mu.RUnlock() // разблокировка после чтения
 
 	// создаём копии, чтобы внешние вызовы не меняли внутренние мапы
-	gaugesCopy := make(map[string]float64, len(m.gauges))
-	for k, v := range m.gauges {
-		gaugesCopy[k] = v
-	}
-
-	countersCopy := make(map[string]int64, len(m.counters))
-	for k, v := range m.counters {
-		countersCopy[k] = v
-	}
+	gaugesCopy := maps.Clone(m.gauges)
+	countersCopy := maps.Clone(m.counters)
 
 	return gaugesCopy, countersCopy
 }
@@ -316,8 +307,8 @@ func (m *MemRepository) SaveToFile() error {
 	}
 	tmpName := tmp.Name()
 	defer func() {
-		if err := os.Remove(tmpName); err != nil && !os.IsNotExist(err) {
-			m.logger.Error("failed to remove temp file", slog.String("file", tmpName), slog.Any("error", err))
+		if removeErr := os.Remove(tmpName); removeErr != nil && !os.IsNotExist(removeErr) {
+			m.logger.Error("failed to remove temp file", slog.String("file", tmpName), slog.Any("error", removeErr))
 		}
 	}()
 

@@ -7,20 +7,20 @@ import (
 
 // Config объединяет настройки всех компонентов приложения
 type Config struct {
-	Server     ServerConfig
-	Agent      AgentConfig
 	LogMetrics LogMetricsConfig
-	Db         DbConfig
 	Audit      AuditConfig
+	Agent      AgentConfig
+	Server     ServerConfig
+	DB         DBConfig
 }
 
 // AgentConfig содержит параметры агента сбора метрик
 type AgentConfig struct {
 	Address        string `env:"ADDRESS"`
+	Key            string `env:"KEY"`
 	ReportInterval int64  `env:"REPORT_INTERVAL"`
 	PollInterval   int64  `env:"POLL_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
-	Key            string `env:"KEY"`
 }
 
 // ServerConfig содержит параметры HTTP-сервера
@@ -36,9 +36,9 @@ type LogMetricsConfig struct {
 	Restore       *bool   `env:"RESTORE"`
 }
 
-// DbConfig содержит параметры подключения к PostgreSQL
-type DbConfig struct {
-	DATABASE_DSN       *string `env:"DATABASE_DSN"`
+// DBConfig содержит параметры подключения к PostgreSQL
+type DBConfig struct {
+	DatabaseDSN        *string `env:"DATABASE_DSN"`
 	MaxOpenConns       int     `env:"DATABASE_MAX_OPEN_CONNS" envDefault:"10"`
 	MaxIdleConns       int     `env:"DATABASE_MAX_IDLE_CONNS" envDefault:"5"`
 	ConnMaxLifetimeSec int64   `env:"DATABASE_CONN_MAX_LIFETIME_SEC" envDefault:"300"`

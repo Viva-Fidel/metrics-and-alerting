@@ -1,15 +1,16 @@
 // Package agent реализует агент сбора и отправки метрик на сервер
 package agent
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
 // Metrics хранит собранные gauge- и counter-метрики агента
 type Metrics struct {
-	mu sync.RWMutex
-	// Gauge содержит gauge-метрики агента
-	Gauge map[string]float64
-	// Counter содержит counter-метрики агента
+	Gauge   map[string]float64
 	Counter map[string]int64
+	mu      sync.RWMutex
 }
 
 // NewMetrics создаёт пустое хранилище метрик агента
@@ -39,15 +40,8 @@ func (m *Metrics) Snapshot() (map[string]float64, map[string]int64) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	gauge := make(map[string]float64, len(m.Gauge))
-	for k, v := range m.Gauge {
-		gauge[k] = v
-	}
-
-	counter := make(map[string]int64, len(m.Counter))
-	for k, v := range m.Counter {
-		counter[k] = v
-	}
+	gauge := maps.Clone(m.Gauge)
+	counter := maps.Clone(m.Counter)
 
 	return gauge, counter
 }

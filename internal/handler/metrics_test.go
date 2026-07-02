@@ -88,8 +88,8 @@ func TestMetricsHandler_GetMetricFromURL(t *testing.T) {
 	tests := []struct {
 		name         string
 		url          string
-		wantStatus   int
 		wantContains string
+		wantStatus   int
 	}{
 		{
 			name:         "existing gauge",
@@ -172,8 +172,8 @@ func TestMetricsHandler_CreateMetricFromJSON(t *testing.T) {
 	tests := []struct {
 		name         string
 		body         string
-		wantStatus   int
 		wantResponse string
+		wantStatus   int
 	}{
 		{
 			name:         "valid gauge",
@@ -241,8 +241,8 @@ func TestMetricsHandler_GetMetricFromJSON(t *testing.T) {
 	tests := []struct {
 		name         string
 		body         string
-		wantStatus   int
 		expectedJSON string
+		wantStatus   int
 	}{
 		{
 			name:       "existing gauge",
@@ -315,8 +315,8 @@ func TestMetricsHandler_CreateMetricsFromJSONBatch(t *testing.T) {
 	tests := []struct {
 		name         string
 		body         string
-		wantStatus   int
 		wantContains string
+		wantStatus   int
 	}{
 		{
 			name: "valid batch",

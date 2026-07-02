@@ -106,7 +106,7 @@ func ExampleMetricsHandler_GetMetricFromJSON() {
 	fmt.Println(w.Body.String())
 	// Output:
 	// 200
-	// {"id":"PollCount","type":"counter","delta":5}
+	// {"delta":5,"id":"PollCount","type":"counter"}
 }
 
 func ExampleMetricsHandler_CreateMetricsFromJSONBatch() {

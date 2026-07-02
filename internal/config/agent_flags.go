@@ -5,10 +5,10 @@ import "flag"
 // AgentFlags содержит итоговые параметры запуска агента
 type AgentFlags struct {
 	RunAddr        string
+	Key            string
 	ReportInterval int64
 	PollInterval   int64
 	RateLimit      int
-	Key            string
 }
 
 // LoadAgentFlags загружает параметры запуска агента из конфигурации

@@ -5,17 +5,17 @@ import "flag"
 // ServerFlags содержит итоговые параметры запуска сервера
 type ServerFlags struct {
 	RunAddr              string
-	StoreInt             int64
 	FilePath             string
-	RestoreData          bool
-	Db                   string
-	DbMaxOpenConns       int
-	DbMaxIdleConns       int
-	DbConnMaxLifetimeSec int64
-	DbConnMaxIdleTimeSec int64
+	DB                   string
 	Key                  string
 	AuditFile            string
 	AuditURL             string
+	StoreInt             int64
+	DBMaxOpenConns       int
+	DBMaxIdleConns       int
+	DBConnMaxLifetimeSec int64
+	DBConnMaxIdleTimeSec int64
+	RestoreData          bool
 }
 
 // LoadServerFlags загружает параметры сервера из флагов и переменных окружения
@@ -31,7 +31,7 @@ func LoadServerFlags() (*ServerFlags, error) {
 	flag.Int64Var(&flags.StoreInt, "i", 300, "interval in seconds to save server metrics (0 = synchronous)")
 	flag.StringVar(&flags.FilePath, "f", "metrics.json", "path to file where server metrics are stored")
 	flag.BoolVar(&flags.RestoreData, "r", false, "load previously saved metrics on startup")
-	flag.StringVar(&flags.Db, "d", "", "database DSN")
+	flag.StringVar(&flags.DB, "d", "", "database DSN")
 	flag.StringVar(&flags.Key, "k", "", "hash key")
 	flag.StringVar(&flags.AuditFile, "audit-file", "", "path to audit log file")
 	flag.StringVar(&flags.AuditURL, "audit-url", "", "URL to send audit logs")
@@ -50,13 +50,13 @@ func LoadServerFlags() (*ServerFlags, error) {
 	if conf.LogMetrics.Restore != nil {
 		flags.RestoreData = *conf.LogMetrics.Restore
 	}
-	if conf.Db.DATABASE_DSN != nil {
-		flags.Db = *conf.Db.DATABASE_DSN
+	if conf.DB.DatabaseDSN != nil {
+		flags.DB = *conf.DB.DatabaseDSN
 	}
-	flags.DbMaxOpenConns = conf.Db.MaxOpenConns
-	flags.DbMaxIdleConns = conf.Db.MaxIdleConns
-	flags.DbConnMaxLifetimeSec = conf.Db.ConnMaxLifetimeSec
-	flags.DbConnMaxIdleTimeSec = conf.Db.ConnMaxIdleTimeSec
+	flags.DBMaxOpenConns = conf.DB.MaxOpenConns
+	flags.DBMaxIdleConns = conf.DB.MaxIdleConns
+	flags.DBConnMaxLifetimeSec = conf.DB.ConnMaxLifetimeSec
+	flags.DBConnMaxIdleTimeSec = conf.DB.ConnMaxIdleTimeSec
 	if conf.Server.Key != "" {
 		flags.Key = conf.Server.Key
 	}

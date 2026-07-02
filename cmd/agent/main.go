@@ -13,7 +13,15 @@ import (
 	"resty.dev/v3"
 )
 
+var (
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
+
 func main() {
+	printBuildInfo()
+
 	// logger
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
@@ -35,7 +43,11 @@ func main() {
 		AddRetryConditions(func(_ *resty.Response, err error) bool {
 			return err != nil
 		})
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			logger.Error("failed to close http client", slog.Any("error", err))
+		}
+	}()
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
