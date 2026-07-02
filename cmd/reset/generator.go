@@ -234,9 +234,10 @@ func (g *resetGenerator) resetLines(expr string, typ types.Type) []string {
 }
 
 func indent(lines []string) []string {
+	prefix := strings.Repeat("\t", 1)
 	result := make([]string, len(lines))
 	for i, line := range lines {
-		result[i] = "\t" + line
+		result[i] = prefix + line
 	}
 	return result
 }

@@ -3,6 +3,7 @@ package noosexit
 
 import (
 	"go/ast"
+	"path/filepath"
 	"go/types"
 	"strings"
 
@@ -36,7 +37,7 @@ func run(pass *analysis.Pass) (any, error) {
 			return
 		}
 
-		if pos := pass.Fset.Position(fn.Pos()); strings.Contains(pos.Filename, "go-build") {
+		if pos := pass.Fset.Position(fn.Pos()); isGoBuildTempFile(pos.Filename) {
 			return
 		}
 
@@ -72,4 +73,19 @@ func run(pass *analysis.Pass) (any, error) {
 	})
 
 	return nil, nil
+}
+
+func isGoBuildTempFile(filename string) bool {
+	for dir := filepath.Dir(filepath.Clean(filename)); ; {
+		base := filepath.Base(dir)
+		if strings.HasPrefix(base, "go-build") {
+			return true
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return false
+		}
+		dir = parent
+	}
 }
