@@ -9,19 +9,12 @@ import (
 )
 
 type serverFileConfig struct {
-	Address                *string `json:"address"`
-	Restore                *bool   `json:"restore"`
-	StoreInterval          *string `json:"store_interval"`
-	StoreFile              *string `json:"store_file"`
-	DatabaseDSN            *string `json:"database_dsn"`
-	CryptoKey              *string `json:"crypto_key"`
-	Key                    *string `json:"key"`
-	AuditFile              *string `json:"audit_file"`
-	AuditURL               *string `json:"audit_url"`
-	DatabaseMaxOpenConns   *int    `json:"database_max_open_conns"`
-	DatabaseMaxIdleConns   *int    `json:"database_max_idle_conns"`
-	DatabaseConnMaxLifeSec *int64  `json:"database_conn_max_lifetime_sec"`
-	DatabaseConnMaxIdleSec *int64  `json:"database_conn_max_idle_time_sec"`
+	Address       *string `json:"address"`
+	Restore       *bool   `json:"restore"`
+	StoreInterval *string `json:"store_interval"`
+	StoreFile     *string `json:"store_file"`
+	DatabaseDSN   *string `json:"database_dsn"`
+	CryptoKey     *string `json:"crypto_key"`
 }
 
 type agentFileConfig struct {
@@ -29,8 +22,6 @@ type agentFileConfig struct {
 	ReportInterval *string `json:"report_interval"`
 	PollInterval   *string `json:"poll_interval"`
 	CryptoKey      *string `json:"crypto_key"`
-	Key            *string `json:"key"`
-	RateLimit      *int    `json:"rate_limit"`
 }
 
 type configPathFlag struct {
@@ -115,27 +106,6 @@ func applyServerFileConfig(path string, flags *ServerFlags) error {
 	if fileCfg.CryptoKey != nil {
 		flags.CryptoKey = *fileCfg.CryptoKey
 	}
-	if fileCfg.Key != nil {
-		flags.Key = *fileCfg.Key
-	}
-	if fileCfg.AuditFile != nil {
-		flags.AuditFile = *fileCfg.AuditFile
-	}
-	if fileCfg.AuditURL != nil {
-		flags.AuditURL = *fileCfg.AuditURL
-	}
-	if fileCfg.DatabaseMaxOpenConns != nil {
-		flags.DBMaxOpenConns = *fileCfg.DatabaseMaxOpenConns
-	}
-	if fileCfg.DatabaseMaxIdleConns != nil {
-		flags.DBMaxIdleConns = *fileCfg.DatabaseMaxIdleConns
-	}
-	if fileCfg.DatabaseConnMaxLifeSec != nil {
-		flags.DBConnMaxLifetimeSec = *fileCfg.DatabaseConnMaxLifeSec
-	}
-	if fileCfg.DatabaseConnMaxIdleSec != nil {
-		flags.DBConnMaxIdleTimeSec = *fileCfg.DatabaseConnMaxIdleSec
-	}
 
 	return nil
 }
@@ -165,12 +135,6 @@ func applyAgentFileConfig(path string, flags *AgentFlags) error {
 	}
 	if fileCfg.CryptoKey != nil {
 		flags.CryptoKey = *fileCfg.CryptoKey
-	}
-	if fileCfg.Key != nil {
-		flags.Key = *fileCfg.Key
-	}
-	if fileCfg.RateLimit != nil {
-		flags.RateLimit = *fileCfg.RateLimit
 	}
 
 	return nil

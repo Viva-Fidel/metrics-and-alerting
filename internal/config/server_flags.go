@@ -1,9 +1,6 @@
 package config
 
-import (
-	"flag"
-	"os"
-)
+import "flag"
 
 // ServerFlags содержит итоговые параметры запуска сервера
 type ServerFlags struct {
@@ -77,18 +74,10 @@ func LoadServerFlags() (*ServerFlags, error) {
 	if conf.DB.DatabaseDSN != nil {
 		flags.DB = *conf.DB.DatabaseDSN
 	}
-	if _, ok := os.LookupEnv("DATABASE_MAX_OPEN_CONNS"); ok {
-		flags.DBMaxOpenConns = conf.DB.MaxOpenConns
-	}
-	if _, ok := os.LookupEnv("DATABASE_MAX_IDLE_CONNS"); ok {
-		flags.DBMaxIdleConns = conf.DB.MaxIdleConns
-	}
-	if _, ok := os.LookupEnv("DATABASE_CONN_MAX_LIFETIME_SEC"); ok {
-		flags.DBConnMaxLifetimeSec = conf.DB.ConnMaxLifetimeSec
-	}
-	if _, ok := os.LookupEnv("DATABASE_CONN_MAX_IDLE_TIME_SEC"); ok {
-		flags.DBConnMaxIdleTimeSec = conf.DB.ConnMaxIdleTimeSec
-	}
+	flags.DBMaxOpenConns = conf.DB.MaxOpenConns
+	flags.DBMaxIdleConns = conf.DB.MaxIdleConns
+	flags.DBConnMaxLifetimeSec = conf.DB.ConnMaxLifetimeSec
+	flags.DBConnMaxIdleTimeSec = conf.DB.ConnMaxIdleTimeSec
 	if conf.Server.Key != "" {
 		flags.Key = conf.Server.Key
 	}
