@@ -12,22 +12,39 @@ type AgentFlags struct {
 	RateLimit      int
 }
 
-// LoadAgentFlags загружает параметры запуска агента из конфигурации
+// LoadAgentFlags загружает параметры запуска агента из файла, флагов и переменных окружения
 func LoadAgentFlags() (*AgentFlags, error) {
+	configPath := resolveConfigPath()
+
+	flags := &AgentFlags{
+		RunAddr:        "localhost:8080",
+		ReportInterval: 10,
+		PollInterval:   2,
+		RateLimit:      1,
+	}
+
+	if configPath != "" {
+		if err := applyAgentFileConfig(configPath, flags); err != nil {
+			return nil, err
+		}
+	}
+
+	configFlag := &configPathFlag{value: configPath}
+	flag.Var(configFlag, "c", "path to JSON configuration file")
+	flag.Var(configFlag, "config", "path to JSON configuration file")
+	flag.StringVar(&flags.RunAddr, "a", flags.RunAddr, "server address")
+	flag.Int64Var(&flags.ReportInterval, "r", flags.ReportInterval, "report sending interval")
+	flag.Int64Var(&flags.PollInterval, "p", flags.PollInterval, "report collecting interval")
+	flag.IntVar(&flags.RateLimit, "l", flags.RateLimit, "max number of concurrent outgoing requests")
+	flag.StringVar(&flags.Key, "k", flags.Key, "hash key")
+	flag.StringVar(&flags.CryptoKey, "crypto-key", flags.CryptoKey, "path to public key file")
+
+	flag.Parse()
+
 	conf, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
-
-	flags := &AgentFlags{}
-
-	flag.StringVar(&flags.RunAddr, "a", "localhost:8080", "server address")
-	flag.Int64Var(&flags.ReportInterval, "r", 10, "report sending interval")
-	flag.Int64Var(&flags.PollInterval, "p", 2, "report collecting interval")
-	flag.IntVar(&flags.RateLimit, "l", 1, "max number of concurrent outgoing requests")
-	flag.StringVar(&flags.Key, "k", "", "hash key")
-	flag.StringVar(&flags.CryptoKey, "crypto-key", "", "path to public key file")
-	flag.Parse()
 
 	if conf.Agent.Address != "" {
 		flags.RunAddr = conf.Agent.Address

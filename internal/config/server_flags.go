@@ -1,6 +1,9 @@
 package config
 
-import "flag"
+import (
+	"flag"
+	"os"
+)
 
 // ServerFlags содержит итоговые параметры запуска сервера
 type ServerFlags struct {
@@ -19,26 +22,45 @@ type ServerFlags struct {
 	RestoreData          bool
 }
 
-// LoadServerFlags загружает параметры сервера из флагов и переменных окружения
+// LoadServerFlags загружает параметры сервера из файла, флагов и переменных окружения
 func LoadServerFlags() (*ServerFlags, error) {
+	configPath := resolveConfigPath()
+
+	flags := &ServerFlags{
+		RunAddr:              "localhost:8080",
+		StoreInt:             300,
+		FilePath:             "metrics.json",
+		DBMaxOpenConns:       10,
+		DBMaxIdleConns:       5,
+		DBConnMaxLifetimeSec: 300,
+		DBConnMaxIdleTimeSec: 60,
+	}
+
+	if configPath != "" {
+		if err := applyServerFileConfig(configPath, flags); err != nil {
+			return nil, err
+		}
+	}
+
+	configFlag := &configPathFlag{value: configPath}
+	flag.Var(configFlag, "c", "path to JSON configuration file")
+	flag.Var(configFlag, "config", "path to JSON configuration file")
+	flag.StringVar(&flags.RunAddr, "a", flags.RunAddr, "server address")
+	flag.Int64Var(&flags.StoreInt, "i", flags.StoreInt, "interval in seconds to save server metrics (0 = synchronous)")
+	flag.StringVar(&flags.FilePath, "f", flags.FilePath, "path to file where server metrics are stored")
+	flag.BoolVar(&flags.RestoreData, "r", flags.RestoreData, "load previously saved metrics on startup")
+	flag.StringVar(&flags.DB, "d", flags.DB, "database DSN")
+	flag.StringVar(&flags.Key, "k", flags.Key, "hash key")
+	flag.StringVar(&flags.CryptoKey, "crypto-key", flags.CryptoKey, "path to private key file")
+	flag.StringVar(&flags.AuditFile, "audit-file", flags.AuditFile, "path to audit log file")
+	flag.StringVar(&flags.AuditURL, "audit-url", flags.AuditURL, "URL to send audit logs")
+
+	flag.Parse()
+
 	conf, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
-
-	flags := &ServerFlags{}
-
-	flag.StringVar(&flags.RunAddr, "a", "localhost:8080", "server address")
-	flag.Int64Var(&flags.StoreInt, "i", 300, "interval in seconds to save server metrics (0 = synchronous)")
-	flag.StringVar(&flags.FilePath, "f", "metrics.json", "path to file where server metrics are stored")
-	flag.BoolVar(&flags.RestoreData, "r", false, "load previously saved metrics on startup")
-	flag.StringVar(&flags.DB, "d", "", "database DSN")
-	flag.StringVar(&flags.Key, "k", "", "hash key")
-	flag.StringVar(&flags.CryptoKey, "crypto-key", "", "path to private key file")
-	flag.StringVar(&flags.AuditFile, "audit-file", "", "path to audit log file")
-	flag.StringVar(&flags.AuditURL, "audit-url", "", "URL to send audit logs")
-
-	flag.Parse()
 
 	if conf.Server.Address != nil {
 		flags.RunAddr = *conf.Server.Address
@@ -55,10 +77,18 @@ func LoadServerFlags() (*ServerFlags, error) {
 	if conf.DB.DatabaseDSN != nil {
 		flags.DB = *conf.DB.DatabaseDSN
 	}
-	flags.DBMaxOpenConns = conf.DB.MaxOpenConns
-	flags.DBMaxIdleConns = conf.DB.MaxIdleConns
-	flags.DBConnMaxLifetimeSec = conf.DB.ConnMaxLifetimeSec
-	flags.DBConnMaxIdleTimeSec = conf.DB.ConnMaxIdleTimeSec
+	if _, ok := os.LookupEnv("DATABASE_MAX_OPEN_CONNS"); ok {
+		flags.DBMaxOpenConns = conf.DB.MaxOpenConns
+	}
+	if _, ok := os.LookupEnv("DATABASE_MAX_IDLE_CONNS"); ok {
+		flags.DBMaxIdleConns = conf.DB.MaxIdleConns
+	}
+	if _, ok := os.LookupEnv("DATABASE_CONN_MAX_LIFETIME_SEC"); ok {
+		flags.DBConnMaxLifetimeSec = conf.DB.ConnMaxLifetimeSec
+	}
+	if _, ok := os.LookupEnv("DATABASE_CONN_MAX_IDLE_TIME_SEC"); ok {
+		flags.DBConnMaxIdleTimeSec = conf.DB.ConnMaxIdleTimeSec
+	}
 	if conf.Server.Key != "" {
 		flags.Key = conf.Server.Key
 	}
