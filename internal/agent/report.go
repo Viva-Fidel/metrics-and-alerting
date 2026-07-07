@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -17,7 +18,7 @@ const metricTypeGauge = "gauge"
 const metricTypeCounter = "counter"
 
 // ReportMetrics отправляет собранные метрики на сервер
-func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string) {
+func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, hashKey string, publicKey *rsa.PublicKey) {
 	gauge, counter := metrics.Snapshot()
 	batch := make([]models.Metrics, 0, len(gauge)+len(counter))
 
@@ -43,7 +44,7 @@ func ReportMetrics(ctx context.Context, client *resty.Client, metrics *Metrics, 
 		return
 	}
 
-	if sendBatchMetrics(ctx, client, batch, hashKey) {
+	if sendBatchMetrics(ctx, client, batch, hashKey, publicKey) {
 		return
 	}
 
@@ -96,7 +97,7 @@ func sendMetricsLegacy(
 }
 
 // sendBatchMetrics отправляет пакет метрик в формате JSON c использованием gzip-сжатия
-func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.Metrics, hashKey string) bool {
+func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.Metrics, hashKey string, publicKey *rsa.PublicKey) bool {
 	var compressed bytes.Buffer
 	zipWriter := gzip.NewWriter(&compressed)
 	if err := json.NewEncoder(zipWriter).Encode(batch); err != nil {
@@ -107,14 +108,23 @@ func sendBatchMetrics(ctx context.Context, client *resty.Client, batch []models.
 		return false
 	}
 
+	body := compressed.Bytes()
+	if publicKey != nil {
+		encrypted, err := security.Encrypt(body, publicKey)
+		if err != nil {
+			return false
+		}
+		body = encrypted
+	}
+
 	var resp *resty.Response
 	req := client.R().
 		SetContext(ctx).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetBody(compressed.Bytes())
+		SetBody(body)
 	if hashKey != "" {
-		req.SetHeader(security.HashHeader, security.BuildHash(compressed.Bytes(), hashKey))
+		req.SetHeader(security.HashHeader, security.BuildHash(body, hashKey))
 	}
 	resp, err := req.Post("/updates")
 	if err != nil {

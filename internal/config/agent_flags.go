@@ -6,6 +6,7 @@ import "flag"
 type AgentFlags struct {
 	RunAddr        string
 	Key            string
+	CryptoKey      string
 	ReportInterval int64
 	PollInterval   int64
 	RateLimit      int
@@ -25,6 +26,7 @@ func LoadAgentFlags() (*AgentFlags, error) {
 	flag.Int64Var(&flags.PollInterval, "p", 2, "report collecting interval")
 	flag.IntVar(&flags.RateLimit, "l", 1, "max number of concurrent outgoing requests")
 	flag.StringVar(&flags.Key, "k", "", "hash key")
+	flag.StringVar(&flags.CryptoKey, "crypto-key", "", "path to public key file")
 	flag.Parse()
 
 	if conf.Agent.Address != "" {
@@ -41,6 +43,9 @@ func LoadAgentFlags() (*AgentFlags, error) {
 	}
 	if conf.Agent.Key != "" {
 		flags.Key = conf.Agent.Key
+	}
+	if conf.Agent.CryptoKey != "" {
+		flags.CryptoKey = conf.Agent.CryptoKey
 	}
 
 	return flags, nil

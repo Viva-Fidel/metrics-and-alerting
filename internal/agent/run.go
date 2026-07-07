@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/rsa"
 	"log/slog"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ func Run(
 	reportInterval int64,
 	rateLimit int,
 	hashKey string,
+	publicKey *rsa.PublicKey,
 ) {
 	logger.Info("Запуск агента")
 
@@ -35,7 +37,7 @@ func Run(
 		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
-				ReportMetrics(ctx, client, metrics, hashKey)
+				ReportMetrics(ctx, client, metrics, hashKey, publicKey)
 			}
 		})
 	}

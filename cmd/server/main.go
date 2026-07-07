@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rsa"
 	"log/slog"
 	"os"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/logging"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/repository"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
 	serverapp "github.com/Viva-Fidel/metrics-and-alerting/internal/server"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/service"
 	"github.com/Viva-Fidel/metrics-and-alerting/pkg/db"
@@ -65,8 +67,17 @@ func main() {
 		}
 	}()
 
+	var privateKey *rsa.PrivateKey
+	if flags.CryptoKey != "" {
+		privateKey, err = security.LoadPrivateKey(flags.CryptoKey)
+		if err != nil {
+			logger.Error("failed to load private key", slog.Any("error", err))
+			os.Exit(1)
+		}
+	}
+
 	// Собираем HTTP-роутер
-	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, auditPublisher)
+	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, privateKey, auditPublisher)
 
 	// Запускаем HTTP-сервер
 	if err := r.Run(flags.RunAddr); err != nil {
