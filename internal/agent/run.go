@@ -28,6 +28,10 @@ func Run(
 		rateLimit = 1
 	}
 
+	// Отдельный контекст отправки: не отменяется по сигналу,
+	// чтобы данные в процессе обработки были успешно переданы на сервер
+	sendCtx := context.Background()
+
 	// Канал для отправки метрик на сервер
 	reportJobs := make(chan struct{}, rateLimit)
 	var workersWG sync.WaitGroup
@@ -37,7 +41,7 @@ func Run(
 		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
-				ReportMetrics(ctx, client, metrics, hashKey, publicKey)
+				ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
 			}
 		})
 	}
@@ -98,8 +102,15 @@ func Run(
 
 	// Ожидание завершения всех циклов
 	<-ctx.Done()
+	logger.Info("Получен сигнал завершения")
 	loopsWG.Wait()
 	close(reportJobs)
 	workersWG.Wait()
+
+	// Финальная отправка: передаём на сервер метрики,
+	// собранные, но ещё не отправленные к моменту получения сигнала
+	logger.Info("Финальная отправка метрик перед завершением")
+	ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
+
 	logger.Info("Остановка агента")
 }

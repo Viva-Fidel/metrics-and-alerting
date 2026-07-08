@@ -1,10 +1,16 @@
 package main
 
 import (
+	"context"
 	"crypto/rsa"
+	"database/sql"
+	"errors"
 	"log/slog"
+	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/audit"
@@ -23,6 +29,8 @@ var (
 	buildCommit  string
 )
 
+const shutdownTimeout = 10 * time.Second
+
 func main() {
 	printBuildInfo()
 
@@ -36,11 +44,13 @@ func main() {
 	}
 
 	// Инициализируем репозиторий метрик с настройками
-	var metricsRepository service.MetricsRepository = repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
+	memRepo := repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
+	var metricsRepository service.MetricsRepository = memRepo
 
 	// Если указан DSN - подключаемся к Postgres, при ошибке остаёмся на in-memory
+	var database *sql.DB
 	if dsn := strings.TrimSpace(flags.DB); dsn != "" {
-		database, err := db.NewDB(dsn, db.Options{
+		database, err = db.NewDB(dsn, db.Options{
 			MaxOpenConns:    flags.DBMaxOpenConns,
 			MaxIdleConns:    flags.DBMaxIdleConns,
 			ConnMaxLifetime: time.Duration(flags.DBConnMaxLifetimeSec) * time.Second,
@@ -49,9 +59,11 @@ func main() {
 		if err != nil {
 			logger.Error("failed to run init db", slog.Any("error", err))
 			logger.Warn("using in-memory metrics storage")
+			database = nil
 		} else {
 			if err := db.RunMigrations(database); err != nil {
 				_ = database.Close()
+				database = nil
 				logger.Error("failed to run migrations", slog.Any("error", err))
 				logger.Warn("using in-memory metrics storage")
 			} else {
@@ -79,8 +91,43 @@ func main() {
 	// Собираем HTTP-роутер
 	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, privateKey, auditPublisher)
 
+	// Graceful shutdown по сигналам SIGINT, SIGTERM, SIGQUIT
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer stop()
+
 	// Запускаем HTTP-сервер
-	if err := r.Run(flags.RunAddr); err != nil {
-		logger.Error("failed to run server", slog.Any("error", err))
+	srv := &http.Server{
+		Addr:    flags.RunAddr,
+		Handler: r,
 	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("failed to run server", slog.Any("error", err))
+			stop() // при ошибке запуска инициируем завершение
+		}
+	}()
+
+	<-ctx.Done()
+	logger.Info("shutdown signal received")
+
+	// Дожидаемся завершения активных запросов
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("failed to shutdown server gracefully", slog.Any("error", err))
+	}
+
+	// Сохраняем все несохранённые данные in-memory хранилища
+	if err := memRepo.Close(); err != nil {
+		logger.Error("failed to save metrics on shutdown", slog.Any("error", err))
+	}
+
+	// Закрываем соединение с БД
+	if database != nil {
+		if err := database.Close(); err != nil {
+			logger.Error("failed to close database", slog.Any("error", err))
+		}
+	}
+
+	logger.Info("server stopped")
 }
