@@ -43,9 +43,13 @@ func main() {
 		logger.Error("failed to load config", slog.Any("error", err))
 	}
 
-	// Инициализируем репозиторий метрик с настройками
-	memRepo := repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
-	var metricsRepository service.MetricsRepository = memRepo
+	var metricsRepository service.MetricsRepository
+	var memRepo *repository.MemRepository
+
+	useMemoryStorage := func() {
+		memRepo = repository.NewMemRepository(logger, flags.FilePath, flags.StoreInt, flags.RestoreData)
+		metricsRepository = memRepo
+	}
 
 	// Если указан DSN - подключаемся к Postgres, при ошибке остаёмся на in-memory
 	var database *sql.DB
@@ -59,17 +63,18 @@ func main() {
 		if err != nil {
 			logger.Error("failed to run init db", slog.Any("error", err))
 			logger.Warn("using in-memory metrics storage")
+			useMemoryStorage()
+		} else if err := db.RunMigrations(database); err != nil {
+			_ = database.Close()
 			database = nil
+			logger.Error("failed to run migrations", slog.Any("error", err))
+			logger.Warn("using in-memory metrics storage")
+			useMemoryStorage()
 		} else {
-			if err := db.RunMigrations(database); err != nil {
-				_ = database.Close()
-				database = nil
-				logger.Error("failed to run migrations", slog.Any("error", err))
-				logger.Warn("using in-memory metrics storage")
-			} else {
-				metricsRepository = repository.NewDBRepository(database)
-			}
+			metricsRepository = repository.NewDBRepository(database)
 		}
+	} else {
+		useMemoryStorage()
 	}
 
 	auditPublisher := audit.NewPublisher(logger, flags.AuditFile, flags.AuditURL)
@@ -118,8 +123,10 @@ func main() {
 	}
 
 	// Сохраняем все несохранённые данные in-memory хранилища
-	if err := memRepo.Close(); err != nil {
-		logger.Error("failed to save metrics on shutdown", slog.Any("error", err))
+	if memRepo != nil {
+		if err := memRepo.Close(); err != nil {
+			logger.Error("failed to save metrics on shutdown", slog.Any("error", err))
+		}
 	}
 
 	// Закрываем соединение с БД

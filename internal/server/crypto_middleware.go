@@ -13,11 +13,6 @@ import (
 // CryptoMiddleware расшифровывает тело входящего запроса с помощью приватного RSA-ключа
 func CryptoMiddleware(privateKey *rsa.PrivateKey) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if privateKey == nil {
-			c.Next()
-			return
-		}
-
 		if c.Request.Body == nil {
 			c.Next()
 			return

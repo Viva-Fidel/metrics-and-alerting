@@ -19,7 +19,9 @@ func NewRouter(metricsRepository service.MetricsRepository, middleware gin.Handl
 
 	router.Use(middleware)
 	router.Use(HashMiddleware(hashKey))
-	router.Use(CryptoMiddleware(privateKey))
+	if privateKey != nil {
+		router.Use(CryptoMiddleware(privateKey))
+	}
 	router.Use(gin.Recovery())
 	router.Use(gzip.Gzip(
 		gzip.DefaultCompression,

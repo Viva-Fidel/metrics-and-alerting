@@ -29,7 +29,9 @@ func Run(
 	}
 
 	// Отдельный контекст отправки: не отменяется по сигналу,
-	// чтобы данные в процессе обработки были успешно переданы на сервер
+	// чтобы данные в процессе обработки были успешно переданы на сервер.
+	// При завершении заменяется на контекст с таймаутом, чтобы не зависнуть
+	// при недоступном сервере.
 	sendCtx := context.Background()
 
 	// Канал для отправки метрик на сервер
@@ -103,6 +105,11 @@ func Run(
 	// Ожидание завершения всех циклов
 	<-ctx.Done()
 	logger.Info("Получен сигнал завершения")
+
+	var cancel context.CancelFunc
+	sendCtx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	loopsWG.Wait()
 	close(reportJobs)
 	workersWG.Wait()

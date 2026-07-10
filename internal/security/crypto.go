@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-// LoadPublicKey загружает RSA публичный ключ из X.509 сертификата в формате PEM
+// LoadPublicKey загружает RSA публичный ключ из PEM файла (X.509 CERTIFICATE или PKIX PUBLIC KEY)
 func LoadPublicKey(path string) (*rsa.PublicKey, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -22,14 +22,26 @@ func LoadPublicKey(path string) (*rsa.PublicKey, error) {
 		return nil, errors.New("failed to decode PEM block containing public key")
 	}
 
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
+	var pub any
+	switch block.Type {
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		pub = cert.PublicKey
+	case "PUBLIC KEY":
+		pub, err = x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, errors.New("unsupported PEM block type: " + block.Type)
 	}
 
-	publicKey, ok := cert.PublicKey.(*rsa.PublicKey)
+	publicKey, ok := pub.(*rsa.PublicKey)
 	if !ok {
-		return nil, errors.New("certificate does not contain RSA public key")
+		return nil, errors.New("public key is not RSA")
 	}
 
 	return publicKey, nil
