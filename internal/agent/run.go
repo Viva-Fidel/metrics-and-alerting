@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"crypto/rsa"
 	"log/slog"
 	"sync"
 	"time"
@@ -19,12 +20,19 @@ func Run(
 	reportInterval int64,
 	rateLimit int,
 	hashKey string,
+	publicKey *rsa.PublicKey,
 ) {
 	logger.Info("Запуск агента")
 
 	if rateLimit < 1 {
 		rateLimit = 1
 	}
+
+	// Отдельный контекст отправки: не отменяется по сигналу,
+	// чтобы данные в процессе обработки были успешно переданы на сервер.
+	// При завершении заменяется на контекст с таймаутом, чтобы не зависнуть
+	// при недоступном сервере.
+	sendCtx := context.Background()
 
 	// Канал для отправки метрик на сервер
 	reportJobs := make(chan struct{}, rateLimit)
@@ -35,7 +43,7 @@ func Run(
 		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
-				ReportMetrics(ctx, client, metrics, hashKey)
+				ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
 			}
 		})
 	}
@@ -96,8 +104,20 @@ func Run(
 
 	// Ожидание завершения всех циклов
 	<-ctx.Done()
+	logger.Info("Получен сигнал завершения")
+
+	var cancel context.CancelFunc
+	sendCtx, cancel = context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	loopsWG.Wait()
 	close(reportJobs)
 	workersWG.Wait()
+
+	// Финальная отправка: передаём на сервер метрики,
+	// собранные, но ещё не отправленные к моменту получения сигнала
+	logger.Info("Финальная отправка метрик перед завершением")
+	ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
+
 	logger.Info("Остановка агента")
 }

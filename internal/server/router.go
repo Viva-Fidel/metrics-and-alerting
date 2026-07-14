@@ -2,6 +2,7 @@
 package server
 
 import (
+	"crypto/rsa"
 	"net/http"
 	_ "net/http/pprof"
 
@@ -13,11 +14,14 @@ import (
 )
 
 // NewRouter создаёт и настраивает gin.Engine с маршрутами метрик, middleware и pprof
-func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc, hashKey string, auditPublisher *audit.Publisher) *gin.Engine {
+func NewRouter(metricsRepository service.MetricsRepository, middleware gin.HandlerFunc, hashKey string, privateKey *rsa.PrivateKey, auditPublisher *audit.Publisher) *gin.Engine {
 	router := gin.New()
 
 	router.Use(middleware)
 	router.Use(HashMiddleware(hashKey))
+	if privateKey != nil {
+		router.Use(CryptoMiddleware(privateKey))
+	}
 	router.Use(gin.Recovery())
 	router.Use(gzip.Gzip(
 		gzip.DefaultCompression,

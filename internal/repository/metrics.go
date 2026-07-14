@@ -209,6 +209,18 @@ func (m *MemRepository) startSaver() {
 	}()
 }
 
+// Close останавливает периодическое сохранение и сохраняет все несохранённые метрики в файл
+func (m *MemRepository) Close() error {
+	m.mu.Lock()
+	if m.stopCh != nil {
+		close(m.stopCh) // останавливаем горутину периодического сохранения
+		m.stopCh = nil
+	}
+	m.mu.Unlock()
+
+	return m.SaveToFile()
+}
+
 func (m *MemRepository) loadFromFile() error {
 	if m.filePath == "" {
 		return nil // файл не указан — ничего не делаем

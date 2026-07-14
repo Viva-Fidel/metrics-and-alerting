@@ -1,4 +1,4 @@
-// Package config загружает параметры сервера и агента из переменных окружения и флагов
+// Package config загружает параметры сервера и агента из JSON-файла, переменных окружения и флагов
 package config
 
 import (
@@ -18,6 +18,7 @@ type Config struct {
 type AgentConfig struct {
 	Address        string `env:"ADDRESS"`
 	Key            string `env:"KEY"`
+	CryptoKey      string `env:"CRYPTO_KEY"`
 	ReportInterval int64  `env:"REPORT_INTERVAL"`
 	PollInterval   int64  `env:"POLL_INTERVAL"`
 	RateLimit      int    `env:"RATE_LIMIT"`
@@ -25,8 +26,9 @@ type AgentConfig struct {
 
 // ServerConfig содержит параметры HTTP-сервера
 type ServerConfig struct {
-	Address *string `env:"ADDRESS"`
-	Key     string  `env:"KEY"`
+	Address   *string `env:"ADDRESS"`
+	Key       string  `env:"KEY"`
+	CryptoKey string  `env:"CRYPTO_KEY"`
 }
 
 // LogMetricsConfig содержит параметры файлового хранилища метрик

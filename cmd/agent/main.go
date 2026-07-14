@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
+	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
 	"resty.dev/v3"
 )
 
@@ -31,6 +33,15 @@ func main() {
 		logger.Error("failed to load config", slog.Any("error", err))
 	}
 
+	var publicKey *rsa.PublicKey
+	if flags.CryptoKey != "" {
+		publicKey, err = security.LoadPublicKey(flags.CryptoKey)
+		if err != nil {
+			logger.Error("failed to load public key", slog.Any("error", err))
+			os.Exit(1)
+		}
+	}
+
 	// Инициализируем хранилище
 	metrics := agent.NewMetrics()
 
@@ -50,9 +61,9 @@ func main() {
 	}()
 
 	// Graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
 	// Запускаем основной цикл сбора и отправки метрик
-	agent.Run(ctx, logger, client, metrics, flags.PollInterval, flags.ReportInterval, flags.RateLimit, flags.Key)
+	agent.Run(ctx, logger, client, metrics, flags.PollInterval, flags.ReportInterval, flags.RateLimit, flags.Key, publicKey)
 }

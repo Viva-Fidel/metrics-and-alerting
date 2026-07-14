@@ -55,7 +55,7 @@ func TestReportMetrics_SendsBatch(t *testing.T) {
 	client := resty.New().SetBaseURL(ts.URL)
 	defer func() { _ = client.Close() }()
 
-	agent.ReportMetrics(context.Background(), client, metrics, "secret")
+	agent.ReportMetrics(context.Background(), client, metrics, "secret", nil)
 
 	assert.Equal(t, "/updates", receivedPath)
 	assert.Equal(t, "gzip", receivedEncoding)
@@ -74,7 +74,7 @@ func TestReportMetrics_SkipsEmptyBatch(t *testing.T) {
 	client := resty.New().SetBaseURL(ts.URL)
 	defer func() { _ = client.Close() }()
 
-	agent.ReportMetrics(context.Background(), client, agent.NewMetrics(), "")
+	agent.ReportMetrics(context.Background(), client, agent.NewMetrics(), "", nil)
 	assert.Equal(t, 0, requestsCount)
 }
 
@@ -100,7 +100,7 @@ func TestReportMetrics_FallbackToLegacy(t *testing.T) {
 	client := resty.New().SetBaseURL(ts.URL)
 	defer func() { _ = client.Close() }()
 
-	agent.ReportMetrics(context.Background(), client, metrics, "")
+	agent.ReportMetrics(context.Background(), client, metrics, "", nil)
 
 	assert.Equal(t, 1, received["/updates"])
 	assert.Equal(t, 1, received["/update/gauge/TestGauge/12.34"])
