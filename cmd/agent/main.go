@@ -45,9 +45,16 @@ func main() {
 	// Инициализируем хранилище
 	metrics := agent.NewMetrics()
 
+	hostIP, err := agent.HostIP()
+	if err != nil {
+		logger.Error("failed to resolve host IP", slog.Any("error", err))
+		os.Exit(1)
+	}
+
 	// Конфигурируем HTTP-клиент
 	client := resty.New().
 		SetBaseURL("http://" + flags.RunAddr).
+		SetHeader(security.RealIPHeader, hostIP).
 		SetRetryCount(3).
 		SetRetryWaitTime(time.Second).
 		SetRetryMaxWaitTime(5 * time.Second).
