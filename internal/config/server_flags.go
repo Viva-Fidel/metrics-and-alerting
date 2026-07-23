@@ -9,6 +9,7 @@ type ServerFlags struct {
 	DB                   string
 	Key                  string
 	CryptoKey            string
+	TrustedSubnet        string
 	AuditFile            string
 	AuditURL             string
 	StoreInt             int64
@@ -51,7 +52,7 @@ func LoadServerFlags() (*ServerFlags, error) {
 
 func parseServerFlagLayer() (*ServerFileConfig, error) {
 	var configPath string
-	var runAddr, filePath, db, key, cryptoKey, auditFile, auditURL string
+	var runAddr, filePath, db, key, cryptoKey, trustedSubnet, auditFile, auditURL string
 	var storeInt int64
 	var restoreData bool
 
@@ -65,6 +66,7 @@ func parseServerFlagLayer() (*ServerFileConfig, error) {
 	fs.StringVar(&db, "d", "", "database DSN")
 	fs.StringVar(&key, "k", "", "hash key")
 	fs.StringVar(&cryptoKey, "crypto-key", "", "path to private key file")
+	fs.StringVar(&trustedSubnet, "t", "", "trusted subnet in CIDR notation")
 	fs.StringVar(&auditFile, "audit-file", "", "path to audit log file")
 	fs.StringVar(&auditURL, "audit-url", "", "URL to send audit logs")
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -79,6 +81,7 @@ func parseServerFlagLayer() (*ServerFileConfig, error) {
 		DatabaseDSN:   &db,
 		Key:           &key,
 		CryptoKey:     &cryptoKey,
+		TrustedSubnet: &trustedSubnet,
 		AuditFile:     &auditFile,
 		AuditURL:      &auditURL,
 	}, nil

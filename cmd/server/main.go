@@ -93,8 +93,14 @@ func main() {
 		}
 	}
 
+	trustedSubnetMiddleware, err := serverapp.TrustedSubnetMiddleware(flags.TrustedSubnet)
+	if err != nil {
+		logger.Error("failed to init trusted subnet middleware", slog.Any("error", err))
+		os.Exit(1)
+	}
+
 	// Собираем HTTP-роутер
-	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, privateKey, auditPublisher)
+	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, privateKey, auditPublisher, trustedSubnetMiddleware)
 
 	// Graceful shutdown по сигналам SIGINT, SIGTERM, SIGQUIT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)

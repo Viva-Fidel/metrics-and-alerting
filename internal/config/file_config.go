@@ -19,6 +19,7 @@ type ServerFileConfig struct {
 	DatabaseDSN                *string `json:"database_dsn"`
 	Key                        *string `json:"key"`
 	CryptoKey                  *string `json:"crypto_key"`
+	TrustedSubnet              *string `json:"trusted_subnet"`
 	AuditFile                  *string `json:"audit_file"`
 	AuditURL                   *string `json:"audit_url"`
 	DatabaseMaxOpenConns       *int    `json:"database_max_open_conns"`
@@ -85,6 +86,7 @@ func loadServerEnvLayer() (*ServerFileConfig, error) {
 		DatabaseDSN:                envString("DATABASE_DSN"),
 		Key:                        envString("KEY"),
 		CryptoKey:                  envString("CRYPTO_KEY"),
+		TrustedSubnet:              envString("TRUSTED_SUBNET"),
 		AuditFile:                  envString("AUDIT_FILE"),
 		AuditURL:                   envString("AUDIT_URL"),
 		DatabaseMaxOpenConns:       maxOpenConns,
@@ -114,6 +116,7 @@ func serverFileConfigToFlags(cfg *ServerFileConfig) *ServerFlags {
 		DB:                   derefString(cfg.DatabaseDSN, ""),
 		Key:                  derefString(cfg.Key, ""),
 		CryptoKey:            derefString(cfg.CryptoKey, ""),
+		TrustedSubnet:        derefString(cfg.TrustedSubnet, ""),
 		AuditFile:            derefString(cfg.AuditFile, ""),
 		AuditURL:             derefString(cfg.AuditURL, ""),
 		DBMaxOpenConns:       derefInt(cfg.DatabaseMaxOpenConns, 10),
