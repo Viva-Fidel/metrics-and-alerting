@@ -12,6 +12,9 @@ const HashHeader = "HashSHA256"
 // RealIPHeader — имя HTTP-заголовка с IP-адресом агента
 const RealIPHeader = "X-Real-IP"
 
+// RealIPMetadataKey — ключ gRPC-метаданных с IP-адресом агента
+const RealIPMetadataKey = "x-real-ip"
+
 // BuildHash вычисляет SHA-256 хеш от тела и ключа
 func BuildHash(body []byte, key string) string {
 	sum := sha256.Sum256(append(body, []byte(key)...))

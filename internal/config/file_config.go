@@ -3,6 +3,7 @@ package config
 // AgentFileConfig описывает параметры агента в JSON-файле конфигурации.
 type AgentFileConfig struct {
 	Address        *string `json:"address"`
+	GRPCAddress    *string `json:"grpc_address"`
 	ReportInterval *int64  `json:"report_interval"`
 	PollInterval   *int64  `json:"poll_interval"`
 	RateLimit      *int    `json:"rate_limit"`
@@ -13,6 +14,7 @@ type AgentFileConfig struct {
 // ServerFileConfig описывает параметры сервера в JSON-файле конфигурации.
 type ServerFileConfig struct {
 	Address                    *string `json:"address"`
+	GRPCAddress                *string `json:"grpc_address"`
 	StoreInterval              *int64  `json:"store_interval"`
 	StoreFile                  *string `json:"store_file"`
 	Restore                    *bool   `json:"restore"`
@@ -44,6 +46,7 @@ func loadAgentEnvLayer() (*AgentFileConfig, error) {
 
 	return &AgentFileConfig{
 		Address:        envString("ADDRESS"),
+		GRPCAddress:    envString("GRPC_ADDRESS"),
 		ReportInterval: reportInterval,
 		PollInterval:   pollInterval,
 		RateLimit:      rateLimit,
@@ -80,6 +83,7 @@ func loadServerEnvLayer() (*ServerFileConfig, error) {
 
 	return &ServerFileConfig{
 		Address:                    envString("ADDRESS"),
+		GRPCAddress:                envString("GRPC_ADDRESS"),
 		StoreInterval:              storeInterval,
 		StoreFile:                  envString("FILE_STORAGE_PATH"),
 		Restore:                    restore,
@@ -99,6 +103,7 @@ func loadServerEnvLayer() (*ServerFileConfig, error) {
 func agentFileConfigToFlags(cfg *AgentFileConfig) *AgentFlags {
 	return &AgentFlags{
 		RunAddr:        derefString(cfg.Address, "localhost:8080"),
+		GRPCAddress:    derefString(cfg.GRPCAddress, ""),
 		ReportInterval: derefInt64(cfg.ReportInterval, 10),
 		PollInterval:   derefInt64(cfg.PollInterval, 2),
 		RateLimit:      derefInt(cfg.RateLimit, 1),
@@ -110,6 +115,7 @@ func agentFileConfigToFlags(cfg *AgentFileConfig) *AgentFlags {
 func serverFileConfigToFlags(cfg *ServerFileConfig) *ServerFlags {
 	return &ServerFlags{
 		RunAddr:              derefString(cfg.Address, "localhost:8080"),
+		GRPCAddress:          derefString(cfg.GRPCAddress, ""),
 		StoreInt:             derefInt64(cfg.StoreInterval, 300),
 		FilePath:             derefString(cfg.StoreFile, "metrics.json"),
 		RestoreData:          derefBool(cfg.Restore, false),

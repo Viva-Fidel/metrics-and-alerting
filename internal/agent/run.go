@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/Viva-Fidel/metrics-and-alerting/internal/proto"
 	"resty.dev/v3"
 )
 
@@ -15,6 +16,8 @@ func Run(
 	ctx context.Context,
 	logger *slog.Logger,
 	client *resty.Client,
+	grpcClient pb.MetricsClient,
+	hostIP string,
 	metrics *Metrics,
 	pollInterval int64,
 	reportInterval int64,
@@ -34,6 +37,14 @@ func Run(
 	// при недоступном сервере.
 	sendCtx := context.Background()
 
+	report := func(ctx context.Context) {
+		if grpcClient != nil {
+			ReportMetricsGRPC(ctx, grpcClient, metrics, hostIP)
+			return
+		}
+		ReportMetrics(ctx, client, metrics, hashKey, publicKey)
+	}
+
 	// Канал для отправки метрик на сервер
 	reportJobs := make(chan struct{}, rateLimit)
 	var workersWG sync.WaitGroup
@@ -43,7 +54,7 @@ func Run(
 		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
-				ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
+				report(sendCtx)
 			}
 		})
 	}
@@ -117,7 +128,7 @@ func Run(
 	// Финальная отправка: передаём на сервер метрики,
 	// собранные, но ещё не отправленные к моменту получения сигнала
 	logger.Info("Финальная отправка метрик перед завершением")
-	ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
+	report(sendCtx)
 
 	logger.Info("Остановка агента")
 }

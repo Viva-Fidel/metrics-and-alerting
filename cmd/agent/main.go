@@ -6,12 +6,16 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/agent"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/config"
+	pb "github.com/Viva-Fidel/metrics-and-alerting/internal/proto"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"resty.dev/v3"
 )
 
@@ -51,26 +55,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Конфигурируем HTTP-клиент
-	client := resty.New().
-		SetBaseURL("http://" + flags.RunAddr).
-		SetHeader(security.RealIPHeader, hostIP).
-		SetRetryCount(3).
-		SetRetryWaitTime(time.Second).
-		SetRetryMaxWaitTime(5 * time.Second).
-		AddRetryConditions(func(_ *resty.Response, err error) bool {
-			return err != nil
-		})
-	defer func() {
-		if err := client.Close(); err != nil {
-			logger.Error("failed to close http client", slog.Any("error", err))
+	var httpClient *resty.Client
+	var grpcConn *grpc.ClientConn
+	var grpcClient pb.MetricsClient
+
+	if grpcAddr := strings.TrimSpace(flags.GRPCAddress); grpcAddr != "" {
+		grpcConn, err = grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Error("failed to create gRPC client", slog.Any("error", err))
+			os.Exit(1)
 		}
-	}()
+		defer func() {
+			if err := grpcConn.Close(); err != nil {
+				logger.Error("failed to close gRPC client", slog.Any("error", err))
+			}
+		}()
+		grpcClient = pb.NewMetricsClient(grpcConn)
+	} else {
+		httpClient = resty.New().
+			SetBaseURL("http://" + flags.RunAddr).
+			SetHeader(security.RealIPHeader, hostIP).
+			SetRetryCount(3).
+			SetRetryWaitTime(time.Second).
+			SetRetryMaxWaitTime(5 * time.Second).
+			AddRetryConditions(func(_ *resty.Response, err error) bool {
+				return err != nil
+			})
+		defer func() {
+			if err := httpClient.Close(); err != nil {
+				logger.Error("failed to close http client", slog.Any("error", err))
+			}
+		}()
+	}
 
 	// Graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer stop()
 
 	// Запускаем основной цикл сбора и отправки метрик
-	agent.Run(ctx, logger, client, metrics, flags.PollInterval, flags.ReportInterval, flags.RateLimit, flags.Key, publicKey)
+	agent.Run(ctx, logger, httpClient, grpcClient, hostIP, metrics, flags.PollInterval, flags.ReportInterval, flags.RateLimit, flags.Key, publicKey)
 }

@@ -5,6 +5,7 @@ import "os"
 // AgentFlags содержит итоговые параметры запуска агента
 type AgentFlags struct {
 	RunAddr        string
+	GRPCAddress    string
 	Key            string
 	CryptoKey      string
 	ReportInterval int64
@@ -44,7 +45,7 @@ func LoadAgentFlags() (*AgentFlags, error) {
 
 func parseAgentFlagLayer() (*AgentFileConfig, error) {
 	var configPath string
-	var addr string
+	var addr, grpcAddress string
 	var reportInterval, pollInterval int64
 	var rateLimit int
 	var key, cryptoKey string
@@ -53,6 +54,7 @@ func parseAgentFlagLayer() (*AgentFileConfig, error) {
 	fs.StringVar(&configPath, "c", "", "path to configuration file")
 	fs.StringVar(&configPath, "config", "", "path to configuration file")
 	fs.StringVar(&addr, "a", "localhost:8080", "server address")
+	fs.StringVar(&grpcAddress, "grpc-address", "", "gRPC server address")
 	fs.Int64Var(&reportInterval, "r", 10, "report sending interval")
 	fs.Int64Var(&pollInterval, "p", 2, "report collecting interval")
 	fs.IntVar(&rateLimit, "l", 1, "max number of concurrent outgoing requests")
@@ -64,6 +66,7 @@ func parseAgentFlagLayer() (*AgentFileConfig, error) {
 
 	return &AgentFileConfig{
 		Address:        &addr,
+		GRPCAddress:    &grpcAddress,
 		ReportInterval: &reportInterval,
 		PollInterval:   &pollInterval,
 		RateLimit:      &rateLimit,
