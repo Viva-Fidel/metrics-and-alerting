@@ -17,6 +17,7 @@ type Config struct {
 // AgentConfig содержит параметры агента сбора метрик
 type AgentConfig struct {
 	Address        string `env:"ADDRESS"`
+	GRPCAddress    string `env:"GRPC_ADDRESS"`
 	Key            string `env:"KEY"`
 	CryptoKey      string `env:"CRYPTO_KEY"`
 	ReportInterval int64  `env:"REPORT_INTERVAL"`
@@ -26,9 +27,10 @@ type AgentConfig struct {
 
 // ServerConfig содержит параметры HTTP-сервера
 type ServerConfig struct {
-	Address   *string `env:"ADDRESS"`
-	Key       string  `env:"KEY"`
-	CryptoKey string  `env:"CRYPTO_KEY"`
+	Address     *string `env:"ADDRESS"`
+	GRPCAddress string  `env:"GRPC_ADDRESS"`
+	Key         string  `env:"KEY"`
+	CryptoKey   string  `env:"CRYPTO_KEY"`
 }
 
 // LogMetricsConfig содержит параметры файлового хранилища метрик

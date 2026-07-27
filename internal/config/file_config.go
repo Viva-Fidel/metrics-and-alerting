@@ -3,6 +3,7 @@ package config
 // AgentFileConfig описывает параметры агента в JSON-файле конфигурации.
 type AgentFileConfig struct {
 	Address        *string `json:"address"`
+	GRPCAddress    *string `json:"grpc_address"`
 	ReportInterval *int64  `json:"report_interval"`
 	PollInterval   *int64  `json:"poll_interval"`
 	RateLimit      *int    `json:"rate_limit"`
@@ -13,12 +14,14 @@ type AgentFileConfig struct {
 // ServerFileConfig описывает параметры сервера в JSON-файле конфигурации.
 type ServerFileConfig struct {
 	Address                    *string `json:"address"`
+	GRPCAddress                *string `json:"grpc_address"`
 	StoreInterval              *int64  `json:"store_interval"`
 	StoreFile                  *string `json:"store_file"`
 	Restore                    *bool   `json:"restore"`
 	DatabaseDSN                *string `json:"database_dsn"`
 	Key                        *string `json:"key"`
 	CryptoKey                  *string `json:"crypto_key"`
+	TrustedSubnet              *string `json:"trusted_subnet"`
 	AuditFile                  *string `json:"audit_file"`
 	AuditURL                   *string `json:"audit_url"`
 	DatabaseMaxOpenConns       *int    `json:"database_max_open_conns"`
@@ -43,6 +46,7 @@ func loadAgentEnvLayer() (*AgentFileConfig, error) {
 
 	return &AgentFileConfig{
 		Address:        envString("ADDRESS"),
+		GRPCAddress:    envString("GRPC_ADDRESS"),
 		ReportInterval: reportInterval,
 		PollInterval:   pollInterval,
 		RateLimit:      rateLimit,
@@ -79,12 +83,14 @@ func loadServerEnvLayer() (*ServerFileConfig, error) {
 
 	return &ServerFileConfig{
 		Address:                    envString("ADDRESS"),
+		GRPCAddress:                envString("GRPC_ADDRESS"),
 		StoreInterval:              storeInterval,
 		StoreFile:                  envString("FILE_STORAGE_PATH"),
 		Restore:                    restore,
 		DatabaseDSN:                envString("DATABASE_DSN"),
 		Key:                        envString("KEY"),
 		CryptoKey:                  envString("CRYPTO_KEY"),
+		TrustedSubnet:              envString("TRUSTED_SUBNET"),
 		AuditFile:                  envString("AUDIT_FILE"),
 		AuditURL:                   envString("AUDIT_URL"),
 		DatabaseMaxOpenConns:       maxOpenConns,
@@ -97,6 +103,7 @@ func loadServerEnvLayer() (*ServerFileConfig, error) {
 func agentFileConfigToFlags(cfg *AgentFileConfig) *AgentFlags {
 	return &AgentFlags{
 		RunAddr:        derefString(cfg.Address, "localhost:8080"),
+		GRPCAddress:    derefString(cfg.GRPCAddress, ""),
 		ReportInterval: derefInt64(cfg.ReportInterval, 10),
 		PollInterval:   derefInt64(cfg.PollInterval, 2),
 		RateLimit:      derefInt(cfg.RateLimit, 1),
@@ -108,12 +115,14 @@ func agentFileConfigToFlags(cfg *AgentFileConfig) *AgentFlags {
 func serverFileConfigToFlags(cfg *ServerFileConfig) *ServerFlags {
 	return &ServerFlags{
 		RunAddr:              derefString(cfg.Address, "localhost:8080"),
+		GRPCAddress:          derefString(cfg.GRPCAddress, ""),
 		StoreInt:             derefInt64(cfg.StoreInterval, 300),
 		FilePath:             derefString(cfg.StoreFile, "metrics.json"),
 		RestoreData:          derefBool(cfg.Restore, false),
 		DB:                   derefString(cfg.DatabaseDSN, ""),
 		Key:                  derefString(cfg.Key, ""),
 		CryptoKey:            derefString(cfg.CryptoKey, ""),
+		TrustedSubnet:        derefString(cfg.TrustedSubnet, ""),
 		AuditFile:            derefString(cfg.AuditFile, ""),
 		AuditURL:             derefString(cfg.AuditURL, ""),
 		DBMaxOpenConns:       derefInt(cfg.DatabaseMaxOpenConns, 10),

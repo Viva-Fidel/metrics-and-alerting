@@ -2,25 +2,20 @@ package agent
 
 import (
 	"context"
-	"crypto/rsa"
 	"log/slog"
 	"sync"
 	"time"
-
-	"resty.dev/v3"
 )
 
 // Run запускает агента, собирает метрики и отправляет их на сервер
 func Run(
 	ctx context.Context,
 	logger *slog.Logger,
-	client *resty.Client,
 	metrics *Metrics,
+	reporter MetricsReporter,
 	pollInterval int64,
 	reportInterval int64,
 	rateLimit int,
-	hashKey string,
-	publicKey *rsa.PublicKey,
 ) {
 	logger.Info("Запуск агента")
 
@@ -34,6 +29,15 @@ func Run(
 	// при недоступном сервере.
 	sendCtx := context.Background()
 
+	report := func(ctx context.Context, workerID int) {
+		if reporter == nil {
+			return
+		}
+		if err := reporter.Report(ctx, metrics); err != nil {
+			logger.Error("failed to report metrics", slog.Int("worker_id", workerID), slog.Any("error", err))
+		}
+	}
+
 	// Канал для отправки метрик на сервер
 	reportJobs := make(chan struct{}, rateLimit)
 	var workersWG sync.WaitGroup
@@ -43,7 +47,7 @@ func Run(
 		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
-				ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
+				report(sendCtx, workerID)
 			}
 		})
 	}
@@ -117,7 +121,7 @@ func Run(
 	// Финальная отправка: передаём на сервер метрики,
 	// собранные, но ещё не отправленные к моменту получения сигнала
 	logger.Info("Финальная отправка метрик перед завершением")
-	ReportMetrics(sendCtx, client, metrics, hashKey, publicKey)
+	report(sendCtx, 0)
 
 	logger.Info("Остановка агента")
 }

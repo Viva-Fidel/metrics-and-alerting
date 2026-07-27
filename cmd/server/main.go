@@ -93,8 +93,22 @@ func main() {
 		}
 	}
 
+	trustedSubnetMiddleware, err := serverapp.TrustedSubnetMiddleware(flags.TrustedSubnet)
+	if err != nil {
+		logger.Error("failed to init trusted subnet middleware", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	metricsService := service.NewMetricsService(metricsRepository)
+
 	// Собираем HTTP-роутер
-	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, privateKey, auditPublisher)
+	r := serverapp.NewRouter(metricsRepository, logging.SlogMiddleware(logger), flags.Key, privateKey, auditPublisher, trustedSubnetMiddleware)
+
+	grpcServer, err := serverapp.NewGRPCServer(flags.GRPCAddress, metricsService, auditPublisher, flags.TrustedSubnet, logger)
+	if err != nil {
+		logger.Error("failed to init gRPC server", slog.Any("error", err))
+		os.Exit(1)
+	}
 
 	// Graceful shutdown по сигналам SIGINT, SIGTERM, SIGQUIT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -112,6 +126,13 @@ func main() {
 		}
 	}()
 
+	go func() {
+		if err := grpcServer.Serve(); err != nil {
+			logger.Error("failed to run gRPC server", slog.Any("error", err))
+			stop()
+		}
+	}()
+
 	<-ctx.Done()
 	logger.Info("shutdown signal received")
 
@@ -120,6 +141,17 @@ func main() {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("failed to shutdown server gracefully", slog.Any("error", err))
+	}
+
+	done := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-shutdownCtx.Done():
+		grpcServer.Stop()
 	}
 
 	// Сохраняем все несохранённые данные in-memory хранилища
