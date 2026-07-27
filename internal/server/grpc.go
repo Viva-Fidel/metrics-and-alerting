@@ -29,7 +29,7 @@ func NewGRPCServer(
 ) (*GRPCServer, error) {
 	addr = strings.TrimSpace(addr)
 	if addr == "" {
-		return nil, nil
+		return &GRPCServer{logger: logger}, nil
 	}
 
 	interceptor, err := TrustedSubnetUnaryInterceptor(trustedSubnet)
@@ -54,7 +54,7 @@ func NewGRPCServer(
 
 // Serve запускает обработку входящих gRPC-соединений.
 func (s *GRPCServer) Serve() error {
-	if s == nil {
+	if s == nil || s.server == nil || s.listener == nil {
 		return nil
 	}
 	s.logger.Info("gRPC server listening", slog.String("addr", s.listener.Addr().String()))
@@ -63,7 +63,7 @@ func (s *GRPCServer) Serve() error {
 
 // GracefulStop останавливает gRPC-сервер с ожиданием активных запросов.
 func (s *GRPCServer) GracefulStop() {
-	if s == nil {
+	if s == nil || s.server == nil {
 		return
 	}
 	s.server.GracefulStop()
@@ -71,7 +71,7 @@ func (s *GRPCServer) GracefulStop() {
 
 // Stop принудительно останавливает gRPC-сервер.
 func (s *GRPCServer) Stop() {
-	if s == nil {
+	if s == nil || s.server == nil {
 		return
 	}
 	s.server.Stop()

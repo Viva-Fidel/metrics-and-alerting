@@ -126,14 +126,12 @@ func main() {
 		}
 	}()
 
-	if grpcServer != nil {
-		go func() {
-			if err := grpcServer.Serve(); err != nil {
-				logger.Error("failed to run gRPC server", slog.Any("error", err))
-				stop()
-			}
-		}()
-	}
+	go func() {
+		if err := grpcServer.Serve(); err != nil {
+			logger.Error("failed to run gRPC server", slog.Any("error", err))
+			stop()
+		}
+	}()
 
 	<-ctx.Done()
 	logger.Info("shutdown signal received")
@@ -145,17 +143,15 @@ func main() {
 		logger.Error("failed to shutdown server gracefully", slog.Any("error", err))
 	}
 
-	if grpcServer != nil {
-		done := make(chan struct{})
-		go func() {
-			grpcServer.GracefulStop()
-			close(done)
-		}()
-		select {
-		case <-done:
-		case <-shutdownCtx.Done():
-			grpcServer.Stop()
-		}
+	done := make(chan struct{})
+	go func() {
+		grpcServer.GracefulStop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-shutdownCtx.Done():
+		grpcServer.Stop()
 	}
 
 	// Сохраняем все несохранённые данные in-memory хранилища

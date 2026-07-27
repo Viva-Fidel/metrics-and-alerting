@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 
 	pb "github.com/Viva-Fidel/metrics-and-alerting/internal/proto"
 	"github.com/Viva-Fidel/metrics-and-alerting/internal/security"
@@ -9,7 +10,7 @@ import (
 )
 
 // ReportMetricsGRPC отправляет собранные метрики на сервер по gRPC батчем.
-func ReportMetricsGRPC(ctx context.Context, client pb.MetricsClient, metrics *Metrics, hostIP string) {
+func ReportMetricsGRPC(ctx context.Context, client pb.MetricsClient, metrics *Metrics, hostIP string) error {
 	gauge, counter := metrics.Snapshot()
 	batch := make([]*pb.Metric, 0, len(gauge)+len(counter))
 
@@ -30,20 +31,20 @@ func ReportMetricsGRPC(ctx context.Context, client pb.MetricsClient, metrics *Me
 	}
 
 	if len(batch) == 0 {
-		return
+		return nil
 	}
 
-	_ = sendBatchMetricsGRPC(ctx, client, batch, hostIP)
+	return sendBatchMetricsGRPC(ctx, client, batch, hostIP)
 }
 
-func sendBatchMetricsGRPC(ctx context.Context, client pb.MetricsClient, batch []*pb.Metric, hostIP string) bool {
+func sendBatchMetricsGRPC(ctx context.Context, client pb.MetricsClient, batch []*pb.Metric, hostIP string) error {
 	if client == nil {
-		return false
+		return errors.New("grpc metrics client is nil")
 	}
 
 	md := metadata.Pairs(security.RealIPMetadataKey, hostIP)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	_, err := client.UpdateMetrics(ctx, &pb.UpdateMetricsRequest{Metrics: batch})
-	return err == nil
+	return err
 }

@@ -73,7 +73,8 @@ func TestNewGRPCServer_EmptyAddress(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	gs, err := NewGRPCServer("", nil, nil, "", logger)
 	require.NoError(t, err)
-	assert.Nil(t, gs)
+	require.NotNil(t, gs)
+	assert.NoError(t, gs.Serve())
 }
 
 func TestNewGRPCServer_Listen(t *testing.T) {

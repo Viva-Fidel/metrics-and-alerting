@@ -58,6 +58,7 @@ func main() {
 	var httpClient *resty.Client
 	var grpcConn *grpc.ClientConn
 	var grpcClient pb.MetricsClient
+	var reporter agent.MetricsReporter
 
 	if grpcAddr := strings.TrimSpace(flags.GRPCAddress); grpcAddr != "" {
 		grpcConn, err = grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -71,6 +72,7 @@ func main() {
 			}
 		}()
 		grpcClient = pb.NewMetricsClient(grpcConn)
+		reporter = agent.NewGRPCReporter(logger, grpcClient, hostIP)
 	} else {
 		httpClient = resty.New().
 			SetBaseURL("http://" + flags.RunAddr).
@@ -86,6 +88,7 @@ func main() {
 				logger.Error("failed to close http client", slog.Any("error", err))
 			}
 		}()
+		reporter = agent.NewHTTPReporter(logger, httpClient, flags.Key, publicKey)
 	}
 
 	// Graceful shutdown
@@ -93,5 +96,5 @@ func main() {
 	defer stop()
 
 	// Запускаем основной цикл сбора и отправки метрик
-	agent.Run(ctx, logger, httpClient, grpcClient, hostIP, metrics, flags.PollInterval, flags.ReportInterval, flags.RateLimit, flags.Key, publicKey)
+	agent.Run(ctx, logger, metrics, reporter, flags.PollInterval, flags.ReportInterval, flags.RateLimit)
 }

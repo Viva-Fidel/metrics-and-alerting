@@ -2,28 +2,20 @@ package agent
 
 import (
 	"context"
-	"crypto/rsa"
 	"log/slog"
 	"sync"
 	"time"
-
-	pb "github.com/Viva-Fidel/metrics-and-alerting/internal/proto"
-	"resty.dev/v3"
 )
 
 // Run запускает агента, собирает метрики и отправляет их на сервер
 func Run(
 	ctx context.Context,
 	logger *slog.Logger,
-	client *resty.Client,
-	grpcClient pb.MetricsClient,
-	hostIP string,
 	metrics *Metrics,
+	reporter MetricsReporter,
 	pollInterval int64,
 	reportInterval int64,
 	rateLimit int,
-	hashKey string,
-	publicKey *rsa.PublicKey,
 ) {
 	logger.Info("Запуск агента")
 
@@ -37,12 +29,13 @@ func Run(
 	// при недоступном сервере.
 	sendCtx := context.Background()
 
-	report := func(ctx context.Context) {
-		if grpcClient != nil {
-			ReportMetricsGRPC(ctx, grpcClient, metrics, hostIP)
+	report := func(ctx context.Context, workerID int) {
+		if reporter == nil {
 			return
 		}
-		ReportMetrics(ctx, client, metrics, hashKey, publicKey)
+		if err := reporter.Report(ctx, metrics); err != nil {
+			logger.Error("failed to report metrics", slog.Int("worker_id", workerID), slog.Any("error", err))
+		}
 	}
 
 	// Канал для отправки метрик на сервер
@@ -54,7 +47,7 @@ func Run(
 		workersWG.Go(func() {
 			for range reportJobs {
 				logger.Info("Отправка метрик", slog.Int("worker_id", workerID))
-				report(sendCtx)
+				report(sendCtx, workerID)
 			}
 		})
 	}
@@ -128,7 +121,7 @@ func Run(
 	// Финальная отправка: передаём на сервер метрики,
 	// собранные, но ещё не отправленные к моменту получения сигнала
 	logger.Info("Финальная отправка метрик перед завершением")
-	report(sendCtx)
+	report(sendCtx, 0)
 
 	logger.Info("Остановка агента")
 }
